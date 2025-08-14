@@ -5,8 +5,21 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// CORS configuration for production
+const corsOptions = {
+  origin: [
+    'http://localhost:5173', // Development
+    'http://localhost:3000', // Alternative dev port
+    'https://cv-plum-ten.vercel.app', // Production frontend
+    'https://cv-4sp1.vercel.app', // API domain (self-reference)
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'stripe-signature'],
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 
 // For Stripe webhooks, we need raw body
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
