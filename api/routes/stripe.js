@@ -33,6 +33,13 @@ const BUNDLES = {
 };
 
 // Create checkout session
+router.options('/create-checkout-session', (req, res) => {
+  res.set('Access-Control-Allow-Methods', 'POST,OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Stripe-Signature');
+  res.set('Access-Control-Max-Age', '86400');
+  return res.sendStatus(204);
+});
+
 router.post('/create-checkout-session', async (req, res) => {
   try {
     // Check if Stripe is properly configured
@@ -114,6 +121,10 @@ router.post('/create-checkout-session', async (req, res) => {
       // Continue anyway - webhook will handle the transaction
     }
 
+    res.set('Vary', 'Origin');
+    if (req.headers.origin) {
+      res.set('Access-Control-Allow-Origin', req.headers.origin);
+    }
     res.json({ sessionId: session.id });
   } catch (error) {
     console.error('Checkout session creation error:', error);
