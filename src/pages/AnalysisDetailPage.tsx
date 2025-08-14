@@ -5,10 +5,13 @@ import ErrorFallback from '../components/ErrorFallback';
 import EnhancedAnalysisResults from '../components/cv-analysis/EnhancedAnalysisResults';
 import { analysisService } from '../services/analysisService';
 import type { CVAnalysis } from '../types/index';
+import { creditService } from '../services/creditService';
+import { useAuth } from '../contexts/AuthContext';
 
 const AnalysisDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user, refreshProfile } = useAuth();
 
   const [analysis, setAnalysis] = useState<CVAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -50,6 +53,20 @@ const AnalysisDetailPage: React.FC = () => {
           setAnalysis(data);
         } else {
           setAnalysis(data);
+          // Fallback: se è un'analisi gratuita completata e non ancora consumata, consuma ora
+          try {
+            if (user && data.status === 'completed' && data.analysis_type === 'limited') {
+              const res = await creditService.consumeFreeAnalysis(user.id);
+              if (!res.success && import.meta.env.DEV) {
+                console.warn('Consumo free analysis (detail page) non riuscito:', res.error);
+              }
+              await refreshProfile();
+            }
+          } catch (err) {
+            if (import.meta.env.DEV) {
+              console.warn('Errore consumo free analysis (detail page):', err);
+            }
+          }
         }
       }
     } catch (e: any) {
