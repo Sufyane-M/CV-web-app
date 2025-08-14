@@ -1,0 +1,21 @@
+{
+  "timestamp": "2025-08-13T08:08:20.921Z",
+  "isDryRun": false,
+  "isForce": true,
+  "summary": {
+    "total": 1,
+    "processed": 1,
+    "dryRun": 0,
+    "errors": 0
+  },
+  "details": [
+    {
+      "analysisId": "6cfa018f-02b4-4d12-ad6b-b23746135ccd",
+      "userId": "c55a9fef-2ace-4656-8993-82d7febed766",
+      "fileName": "test-cv-timeout-with-transaction.pdf",
+      "userEmail": "majdouli.sufyane@gmail.com",
+      "success": true,
+      "action": "processed"
+    }
+  ]
+}

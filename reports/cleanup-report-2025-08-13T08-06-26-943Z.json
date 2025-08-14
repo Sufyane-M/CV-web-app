@@ -1,0 +1,21 @@
+{
+  "timestamp": "2025-08-13T08:06:26.943Z",
+  "isDryRun": true,
+  "isForce": false,
+  "summary": {
+    "total": 1,
+    "processed": 0,
+    "dryRun": 1,
+    "errors": 0
+  },
+  "details": [
+    {
+      "analysisId": "3f528576-ed75-465f-ad5d-983b3a30c258",
+      "userId": "c55a9fef-2ace-4656-8993-82d7febed766",
+      "fileName": "test-timeout.pdf",
+      "userEmail": "majdouli.sufyane@gmail.com",
+      "success": true,
+      "action": "dry-run"
+    }
+  ]
+}

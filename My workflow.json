@@ -1,0 +1,806 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "model": "={{ $('Impostazioni Centralizzate').item.json.model_validator }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -2928,
+        752
+      ],
+      "id": "8a39ad52-3cf1-461f-92ca-e8347a37242e",
+      "name": "Verifica se è un CV",
+      "credentials": {
+        "groqApi": {
+          "id": "e9yppDCN6oassA2M",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "496868a4-913d-4da1-9b80-33cae5e7ff1b",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "CV",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2464,
+        496
+      ],
+      "id": "071bc17b-f2bd-490d-850e-f6aafcb517ea",
+      "name": "È un CV?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"error\": \"Il documento fornito non sembra essere un curriculum.\",\n  \"message\": \"Per favore, assicurati di caricare un file che sia un CV valido.\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -2288,
+        800
+      ],
+      "id": "d81813a8-cd17-4978-97f4-84cb5e6015c4",
+      "name": "Errore: Documento non valido"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1360,
+        496
+      ],
+      "id": "8781fb69-e404-4ba3-bf2b-00e412c9a88b",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chunkText }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=Sei un assistente HR specializzato nell'estrazione di informazioni da sezioni di un CV. Analizza il testo fornito, che è solo una parte di un curriculum completo. Riassumi in modo schematico i punti chiave come esperienze lavorative, competenze, titoli di studio e date menzionate SOLO in questa sezione. Sii molto conciso e vai dritto al punto.\n\nIl tuo output deve contenere SOLO il riassunto schematico. Non includere alcun commento, pensiero, tag XML/HTML o testo introduttivo."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -976,
+        512
+      ],
+      "id": "95b7a70b-4ff4-47ff-bd51-b9b040ba98c2",
+      "name": "AI Agent2",
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"executiveSummary\": {\n      \"type\": \"string\"\n    },\n    \"matchAnalysis\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"matchScore\": {\n          \"type\": \"number\"\n        },\n        \"keywordsFound\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"string\"\n          }\n        },\n        \"keywordsMissing\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"string\"\n          }\n        }\n      },\n      \"required\": [\n        \"matchScore\",\n        \"keywordsFound\",\n        \"keywordsMissing\"\n      ]\n    },\n    \"overallScore\": {\n      \"type\": \"number\"\n    },\n    \"atsScore\": {\n      \"type\": \"number\"\n    },\n    \"contentScore\": {\n      \"type\": \"number\"\n    },\n    \"designScore\": {\n      \"type\": \"number\"\n    },\n    \"suggestions\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"critical\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"object\",\n            \"properties\": {\n              \"category\": {\n                \"type\": \"string\",\n                \"enum\": [\n                  \"ATS\",\n                  \"Content\",\n                  \"Design\"\n                ]\n              },\n              \"title\": {\n                \"type\": \"string\"\n              },\n              \"description\": {\n                \"type\": \"string\"\n              },\n              \"suggestion\": {\n                \"type\": \"string\"\n              },\n              \"example\": {\n                \"type\": \"string\"\n              }\n            },\n            \"required\": [\n              \"category\",\n              \"title\",\n              \"description\",\n              \"suggestion\",\n              \"example\"\n            ]\n          }\n        },\n        \"warnings\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"object\",\n            \"properties\": {\n              \"category\": {\n                \"type\": \"string\",\n                \"enum\": [\n                  \"ATS\",\n                  \"Content\",\n                  \"Design\"\n                ]\n              },\n              \"title\": {\n                \"type\": \"string\"\n              },\n              \"description\": {\n                \"type\": \"string\"\n              },\n              \"suggestion\": {\n                \"type\": \"string\"\n              },\n              \"example\": {\n                \"type\": \"string\"\n              }\n            },\n            \"required\": [\n              \"category\",\n              \"title\",\n              \"description\",\n              \"suggestion\",\n              \"example\"\n            ]\n          }\n        },\n        \"successes\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"object\",\n            \"properties\": {\n              \"category\": {\n                \"type\": \"string\",\n                \"enum\": [\n                  \"ATS\",\n                  \"Content\",\n                  \"Design\"\n                ]\n              },\n              \"title\": {\n                \"type\": \"string\"\n              }\n            },\n            \"required\": [\n              \"category\",\n              \"title\"\n            ]\n          }\n        }\n      },\n      \"required\": [\n        \"critical\",\n        \"warnings\",\n        \"successes\"\n      ]\n    }\n  },\n  \"required\": [\n    \"executiveSummary\",\n    \"matchAnalysis\",\n    \"overallScore\",\n    \"atsScore\",\n    \"contentScore\",\n    \"designScore\",\n    \"suggestions\"\n  ]\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -528,
+        288
+      ],
+      "id": "9d2c0a98-8977-4752-83de-3c1a13d126c7",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "model": "=qwen/qwen3-32b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -496,
+        464
+      ],
+      "id": "0c667a23-8840-4849-b9c8-f48d10e9447f",
+      "name": "Output Parser1",
+      "credentials": {
+        "groqApi": {
+          "id": "e9yppDCN6oassA2M",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "11bbc076-106a-4aad-a24b-ec3836cfc610",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7c3a7868-1168-4f45-b830-470ec89f17ad",
+              "leftValue": "={{ $('Pulizia testo').item.json.text.length }}",
+              "rightValue": "={{ $('Impostazioni Centralizzate').item.json.max_context_length }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2176,
+        480
+      ],
+      "id": "3d7275c2-4cee-4e9e-8b3f-3051b77288a8",
+      "name": "If1",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "=file",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -3760,
+        512
+      ],
+      "id": "b390f192-fa32-42fb-8ddb-aa6b49385de8",
+      "name": "Estrazione testo CV"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "496868a4-913d-4da1-9b80-33cae5e7ff1b",
+              "leftValue": "={{ $('Estrazione testo CV').item.json.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -3184,
+        512
+      ],
+      "id": "7b24aab2-df27-48fc-8861-38f903b97e42",
+      "name": "Il documento è vuoto?"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analizza il seguente testo e determina se è un curriculum vitae (CV). La tua risposta deve essere UNA SOLA PAROLA: rispondi 'CV' se il testo è un curriculum, altrimenti rispondi 'ALTRO'. Non aggiungere nient'altro.\n\nTesto:\n{{ $json.text }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -2880,
+        496
+      ],
+      "id": "f8694c32-e411-47c8-abda-636b2b1177e5",
+      "name": "Si tratta di un cv?"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Recupera l'output del nodo precedente\nconst text = $('Estrazione testo CV').item.json.text;\n\n// 1. Rimuove righe vuote multiple, lasciandone solo una\nconst cleanedText = text.replace(/(\\r\\n|\\n|\\r){2,}/gm, '\\n');\n\n// 2. Rimuove spazi bianchi extra all'inizio e alla fine di ogni riga\nconst trimmedText = cleanedText.split('\\n').map(line => line.trim()).join('\\n');\n\n// Restituisce il testo pulito per il nodo successivo\nreturn { text: trimmedText };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3376,
+        512
+      ],
+      "id": "3c5feb8c-3a79-4691-a9a6-854d0bf6be51",
+      "name": "Pulizia testo"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -784,
+        320
+      ],
+      "id": "dd8c7a37-da12-48d3-9093-e7bbf71470a9",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "T4crVShyC0P1o2rV",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b52f9148-20b2-4c31-945b-b231739c50df",
+              "name": "model_validator",
+              "value": "llama-3.1-8b-instant",
+              "type": "string"
+            },
+            {
+              "id": "3895ea4e-d483-471c-81f1-82ffab241b09",
+              "name": "model_summarizer",
+              "value": "qwen/qwen3-32b",
+              "type": "string"
+            },
+            {
+              "id": "2cdffb30-27e9-4f08-ac09-963be37457c0",
+              "name": "model_analyst",
+              "value": "models/gemini-2.5-flash",
+              "type": "string"
+            },
+            {
+              "id": "67614e43-58f7-4c8f-97c2-fcc2d3eacc29",
+              "name": "max_context_length",
+              "value": 7000,
+              "type": "number"
+            },
+            {
+              "id": "1f032d8c-e324-4d6d-9015-4a87a16a6694",
+              "name": "chunk_size",
+              "value": 6000,
+              "type": "number"
+            },
+            {
+              "id": "be7f61a4-5187-4984-b3c5-7b1b16be9cb5",
+              "name": "job_description",
+              "value": "={{ $('Input via web-app').item.json.body.jobDescription }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3568,
+        512
+      ],
+      "id": "c71c3415-99b9-4c8d-baf0-c28e533acda6",
+      "name": "Impostazioni Centralizzate"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $('Estrazione testo CV').first().json.text;\nconst chunkSize = {{ $('Impostazioni Centralizzate').item.json.chunk_size }}; // Imposta una dimensione sicura per il tuo modello (in caratteri)\nconst chunks = [];\n\nfor (let i = 0; i < text.length; i += chunkSize) {\n  chunks.push({\n    chunkText: text.substring(i, i + chunkSize)\n  });\n}\n\n// Restituisce un array di oggetti, ognuno contenente un blocco di testo\nreturn chunks;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1648,
+        496
+      ],
+      "id": "fbcc03f9-ba47-4b87-a92c-db80f3ce0bee",
+      "name": "Suddividi Testo in Chunks"
+    },
+    {
+      "parameters": {
+        "model": "={{ $('Impostazioni Centralizzate').item.json.model_summarizer }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -1056,
+        832
+      ],
+      "id": "9532ba26-23d8-425e-9ff6-0996b6e11dc7",
+      "name": "Sintetizza Sezione CV",
+      "credentials": {
+        "groqApi": {
+          "id": "e9yppDCN6oassA2M",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Correzione: si usa \"$input.all()\" per ottenere tutti gli elementi\nconst items = $input.all();\n\nlet combinedAnalysis = \"\";\n\nfor (const item of items) {\n  // Accedi alla stringa di output dal JSON di ogni item\n  const rawOutput = item.json.output;\n\n  if (rawOutput && typeof rawOutput === 'string') {\n    // Pulisci la stringa: rimuovi il blocco <think> e gli spazi\n    const cleanText = rawOutput.replace(/<think>[\\s\\S]*?<\\/think>/, '').trim();\n\n    // Aggiungi il testo pulito all'analisi combinata\n    combinedAnalysis += cleanText + \"\\n\\n--- SEZIONE SUCCESSIVA ---\\n\\n\";\n  }\n}\n\nreturn {\n  fullAnalysis: combinedAnalysis\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1168,
+        304
+      ],
+      "id": "2322ddf7-59fa-46e9-b749-f535b4325424",
+      "name": "Combina Sintesi Sezioni",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fad7ff73-1e77-40cd-aeaa-a100da953e5a",
+              "name": "fullAnalysis",
+              "value": "={{ $('Estrazione testo CV').item.json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1648,
+        80
+      ],
+      "id": "a48a7735-14eb-43c8-a7b0-80f9ebd6b6ec",
+      "name": "Prepara Analisi Diretta (CV Corto)"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=={\n  \"cv_summary\": {{ $('Pulizia testo').item.json.text }},\n  \"job_description\": {{ $('Input via web-app').item.json.body.jobDescription }}\n}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=Sei un HR Tech Analyst e Career Coach senior con oltre 15 anni di esperienza specializzata nel mercato del lavoro italiano ed europeo. Le tue competenze chiave includono:\n\nOttimizzazione ATS: Expertise approfondita sui sistemi di tracciamento candidati e algoritmi di matching\nAnalisi strategica: Capacità di identificare gap e opportunità di miglioramento nei CV\nCoaching orientato ai risultati: Approccio pratico e incoraggiante per massimizzare le possibilità di successo\nKnowledge aggiornato: Competenze sempre aggiornate sulle best practice HR e tendenze del recruitment\n\nObiettivo Principale\nAnalizzare strategicamente il riassunto di un CV in relazione a specifiche offerte di lavoro per:\n\nMassimizzare il superamento dei filtri ATS attraverso ottimizzazione tecnica e semantica\nConvincere i recruiter umani con un profilo mirato e persuasivo\nFornire interventi di miglioramento chiari, specifici e immediatamente applicabili\n\nInput Format\nRiceverai i dati in formato JSON strutturato:\njson{\n  \"cv_summary\": \"...\",\n  \"job_description\": \"...\"\n}\nOutput Structure Requirements\n1. Executive Summary\n\n2-3 frasi incisive che contestualizzano il candidato rispetto alla posizione\nInizia sempre con il nome del candidato se disponibile\nEvidenzia potenziale, allineamento e punti di forza rilevanti per il ruolo\nTono professionale ma incoraggiante\n\n2. Match Analysis - Analisi Quantitativa\n\nMatch Score (1-100): Percentuale di allineamento CV-job description basata su competenze, esperienza e linguaggio utilizzato\nKeywords Found: Lista dettagliata delle parole chiave e competenze richieste già presenti nel CV\nKeywords Missing: Identificazione critica di competenze/termini fondamentali assenti dal CV\n\n3. Scoring Dettagliato\nFornisci punteggi specifici (1-100) per:\n\nOverall Score: Valutazione complessiva del CV\nATS Score: Ottimizzazione per sistemi automatici\nContent Score: Qualità e rilevanza dei contenuti\nDesign Score: Struttura, formattazione e leggibilità\n\n4. Suggestions - Raccomandazioni Strutturate\nCritical Issues (Priorità Massima)\nProblemi che compromettono significativamente le possibilità di successo:\n\nMancanza di keywords essenziali\nErrori di formattazione che impediscono la lettura ATS\nGap competenziali critici\nStruttura inadeguata\n\nWarnings (Miglioramenti Importanti)\nAree di ottimizzazione che aumentano le possibilità di successo:\n\nLinguaggio da migliorare\nOrdine delle sezioni\nDettagli mancanti ma non critici\n\nSuccesses (Punti di Forza)\nElementi già ben strutturati da mantenere e valorizzare\nPer ogni suggerimento Critical e Warning includi:\n\nCategory: ATS, Content, o Design\nTitle: Titolo chiaro del problema\nDescription: Spiegazione dettagliata del problema\nSuggestion: Raccomandazione specifica per risolverlo\nExample: Esempio concreto di riscrittura migliorata\n\nLinee Guida per l'Analisi\nCriteri di Valutazione ATS\n\nPresenza di keywords esatte e sinonimi\nFormattazione compatibile (intestazioni standard, font leggibili)\nStruttura logica delle sezioni\nLunghezza appropriata dei contenuti\n\nCriteri di Valutazione Content\n\nRilevanza dell'esperienza rispetto al ruolo\nQuantificazione dei risultati ottenuti\nChiarezza espositiva e storytelling professionale\nCompletezza informativa\n\nCriteri di Valutazione Design\n\nLeggibilità e struttura visiva\nGerarchia delle informazioni\nConsistenza formale\nProfessionalità dell'aspetto generale\n\nTono e Approccio\nMantieni sempre il tono di un consulente esperto e fidato che:\n\nSi prende cura del percorso professionale del candidato\nFornisce feedback costruttivo e motivante\nOffre soluzioni concrete e applicabili\nBilancia onestà professionale con supporto emotivo\nDimostra genuine interesse per il successo del candidato\n\nBest Practices\n\nPersonalizzazione: Ogni suggerimento deve essere specifico per il CV e job description analizzati\nPraticità: Focus su azioni concrete e immediatamente implementabili\nPrioritizzazione: Ordina i suggerimenti per impatto potenziale\nEvidence-based: Basa le raccomandazioni su principi consolidati di recruitment e psicologia del lavoro\nCompletezza: Copri tutti gli aspetti critici senza essere ridondante"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -720,
+        80
+      ],
+      "id": "3c1af6b3-4826-4ac9-85d6-156965999fcc",
+      "name": "Genera Analisi Finale HR",
+      "retryOnFail": true,
+      "executeOnce": false,
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"error\": \"Il documento fornito è vuoto o corrotto\",\n  \"message\": \"Per favore, assicurati di caricare un file non vuoto o non corrotto\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -3200,
+        816
+      ],
+      "id": "21c52c05-c4f3-4346-ba79-4067f1aa21ac",
+      "name": "Errore: Documento non valido1"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"error\": \"Impossibile analizzare il documento al momento. Riprova più tardi.\"}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        192
+      ],
+      "id": "717c893d-48e7-4b80-ae71-71a7b9b9ae28",
+      "name": "Errore: Documento non valido2"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "prova",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -3920,
+        512
+      ],
+      "id": "f44ca53e-2ddf-48e7-b3f7-e015084c7f33",
+      "name": "Input via web-app",
+      "webhookId": "c0f288b4-118e-4289-9f99-72d5b688a035"
+    }
+  ],
+  "pinData": {
+    "Respond to Webhook1": [
+      {
+        "json": {
+          "output": {
+            "executiveSummary": "Badr, il tuo profilo di Consulente Finanziario con 4 anni di esperienza in Banco BPM è solido e mostra una chiara progressione di carriera. Per rendere il CV davvero competitivo, è essenziale trasformare le descrizioni delle tue responsabilità in risultati concreti e quantificabili. Poiché non è stata fornita una descrizione del lavoro, questa analisi si concentra sul rafforzamento generale del tuo CV per massimizzarne l'impatto.",
+            "matchAnalysis": {
+              "matchScore": 0,
+              "keywordsFound": [],
+              "keywordsMissing": [
+                "Impossibile determinare le parole chiave mancanti senza una job description di riferimento."
+              ]
+            },
+            "overallScore": 60,
+            "atsScore": 65,
+            "contentScore": 55,
+            "designScore": 60,
+            "suggestions": {
+              "critical": [
+                {
+                  "category": "Content",
+                  "title": "Mancanza di Risultati Quantificabili e Impatto",
+                  "description": "La sezione 'Esperienze lavorative' elenca le mansioni svolte, ma non comunica l'impatto e il valore che hai generato. I recruiter cercano prove concrete dei risultati ottenuti, espresse con numeri e metriche, per comprendere il tuo potenziale contributo all'azienda.",
+                  "suggestion": "Riscrivi i punti elenco di ogni esperienza lavorativa focalizzandoti sui risultati. Utilizza la formula 'Azione + Metrica + Risultato'. Chiediti: 'Quanti clienti ho gestito? Di che valore era il portafoglio? Quali obiettivi ho raggiunto o superato?'",
+                  "example": "Da: 'Ruolo di consulente finanziario dipendente con attività di consulenza improntata al wealth management del portafoglio di clienti.' A: 'Gestione di un portafoglio clienti private dal valore di 5M€, conseguendo un incremento della raccolta netta del 10% anno su anno attraverso strategie di investimento personalizzate.'"
+                }
+              ],
+              "warnings": [
+                {
+                  "category": "Design",
+                  "title": "Struttura e Gerarchia delle Informazioni da Ottimizzare",
+                  "description": "La struttura attuale, con le competenze elencate prima dell'esperienza lavorativa, non segue lo standard a cui i recruiter sono abituati. Un recruiter dedica in media 6-7 secondi alla prima scansione di un CV; una struttura non convenzionale può renderla più difficile e rallentare l'individuazione delle informazioni chiave.",
+                  "suggestion": "Adotta una struttura più classica e universalmente riconosciuta per migliorare la leggibilità e la compatibilità con gli ATS. Ordina le sezioni in modo gerarchico per dare priorità alle informazioni più importanti, come l'esperienza lavorativa.",
+                  "example": "Adotta questa sequenza: 1. Contatti (in alto), 2. Profilo Riepilogativo, 3. Esperienza Lavorativa, 4. Istruzione e Formazione, 5. Competenze (Skills). Questo layout è immediatamente riconoscibile e ottimizzato per la scansione rapida."
+                },
+                {
+                  "category": "Content",
+                  "title": "Linguaggio Generico nelle Descrizioni",
+                  "description": "Espressioni come 'consulenza di prodotti finanziari di ogni tipo' o 'analisi di mercato' sono troppo vaghe e non riescono a differenziare la tua candidatura da quella di altri professionisti. I dettagli specifici sono fondamentali per dimostrare una competenza approfondita.",
+                  "suggestion": "Sii più specifico sui tipi di prodotti, sulle analisi effettuate o sulle strategie che hai implementato. Ad esempio: quali strumenti hai usato per l'analisi di mercato (es. Bloomberg, FactSet)? Che tipo di clienti hai gestito (privati, affluent, private)?",
+                  "example": "Da: 'consulenza di prodotti finanziari di ogni tipo' A: 'Consulenza e vendita mirata di un'ampia gamma di soluzioni di investimento, tra cui fondi comuni (azionari, obbligazionari), ETF, gestioni patrimoniali (GPM) e prodotti assicurativi ramo vita.'"
+                }
+              ],
+              "successes": [
+                {
+                  "category": "Content",
+                  "title": "Profilo Professionale Chiaro e Incisivo"
+                },
+                {
+                  "category": "Content",
+                  "title": "Progressione di Carriera Coerente e Rilevante"
+                },
+                {
+                  "category": "Content",
+                  "title": "Elenco di Competenze Tecniche e Trasversali Ben Bilanciato"
+                }
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Verifica se è un CV": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Si tratta di un cv?",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "È un CV?": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Errore: Documento non valido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Combina Sintesi Sezioni",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Output Parser1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Genera Analisi Finale HR",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Suddividi Testo in Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepara Analisi Diretta (CV Corto)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Estrazione testo CV": {
+      "main": [
+        [
+          {
+            "node": "Impostazioni Centralizzate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Il documento è vuoto?": {
+      "main": [
+        [
+          {
+            "node": "Si tratta di un cv?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Errore: Documento non valido1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Si tratta di un cv?": {
+      "main": [
+        [
+          {
+            "node": "È un CV?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pulizia testo": {
+      "main": [
+        [
+          {
+            "node": "Il documento è vuoto?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Genera Analisi Finale HR",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Impostazioni Centralizzate": {
+      "main": [
+        [
+          {
+            "node": "Pulizia testo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suddividi Testo in Chunks": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sintetizza Sezione CV": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combina Sintesi Sezioni": {
+      "main": [
+        [
+          {
+            "node": "Genera Analisi Finale HR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Genera Analisi Finale HR": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Errore: Documento non valido2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input via web-app": {
+      "main": [
+        [
+          {
+            "node": "Estrazione testo CV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepara Analisi Diretta (CV Corto)": {
+      "main": [
+        [
+          {
+            "node": "Genera Analisi Finale HR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b88604cb-a78b-4182-b242-848adb2d7bab",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f7eba44ee7809f0194db82fab6596691db076f14606accfc11834cc2e20e3a25"
+  },
+  "id": "HQPwv3dGXr1LUdbJ",
+  "tags": []
+}
