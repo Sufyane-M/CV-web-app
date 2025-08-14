@@ -3,7 +3,11 @@ import type { Database } from '../types/database';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const appBaseUrl = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '');
+// Prefer runtime origin in production; ignore misconfigured localhost URL
+const envAppUrl = (import.meta.env.VITE_APP_URL || '').replace(/\/$/, '');
+const appBaseUrl = envAppUrl && !envAppUrl.includes('localhost')
+  ? envAppUrl
+  : window.location.origin.replace(/\/$/, '');
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
@@ -18,9 +22,7 @@ const retryOperation = async <T>(operation: () => Promise<T>, maxRetries = 3, de
       if (attempt === maxRetries) {
         throw error;
       }
-      if (import.meta.env.DEV) {
-        console.warn(`Operation failed (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms...`, error);
-      }
+      console.warn(`Operation failed (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms...`, error);
       await new Promise(resolve => setTimeout(resolve, delay * attempt));
     }
   }
@@ -166,9 +168,7 @@ export const db = {
         
         return result;
       } catch (error) {
-        if (import.meta.env.DEV) {
-          console.error('Error in profiles.get:', error);
-        }
+        console.error('Error in profiles.get:', error);
         return { data: null, error: { message: 'Network error', details: error } };
       }
     },
@@ -219,18 +219,14 @@ export const db = {
           .eq('id', analysisId)
           .single();
         
-           if (error) {
-           if (import.meta.env.DEV) {
-             console.error('Error fetching analysis:', error);
-           }
-           return { data: null, error };
-         }
+        if (error) {
+          console.error('Error fetching analysis:', error);
+          return { data: null, error };
+        }
         
         return { data, error };
-       } catch (error) {
-         if (import.meta.env.DEV) {
-           console.error('Error in analyses.get:', error);
-         }
+      } catch (error) {
+        console.error('Error in analyses.get:', error);
         return { data: null, error };
       }
     },
@@ -243,14 +239,12 @@ export const db = {
             .insert(analysis)
             .select()
             .single();
-           if (error) throw error;
+          if (error) throw error;
           return { data, error };
         });
         return result;
-       } catch (error) {
-         if (import.meta.env.DEV) {
-           console.error('Error in analyses.create:', error);
-         }
+      } catch (error) {
+        console.error('Error in analyses.create:', error);
         return { data: null, error } as any;
       }
     },
@@ -264,14 +258,12 @@ export const db = {
             .eq('id', analysisId)
             .select()
             .single();
-           if (error) throw error;
+          if (error) throw error;
           return { data, error };
         });
         return result;
-       } catch (error) {
-         if (import.meta.env.DEV) {
-           console.error('Error in analyses.update:', error);
-         }
+      } catch (error) {
+        console.error('Error in analyses.update:', error);
         return { data: null, error } as any;
       }
     },
@@ -285,18 +277,14 @@ export const db = {
           .order('created_at', { ascending: false })
           .range(offset, offset + limit - 1);
         
-         if (error) {
-           if (import.meta.env.DEV) {
-             console.error('Error fetching analyses list:', error);
-           }
+        if (error) {
+          console.error('Error fetching analyses list:', error);
           return { data: [], error };
         }
         
         return { data: data || [], error };
-       } catch (error) {
-         if (import.meta.env.DEV) {
-           console.error('Error in analyses.list:', error);
-         }
+      } catch (error) {
+        console.error('Error in analyses.list:', error);
         return { data: [], error };
       }
     },
@@ -310,18 +298,14 @@ export const db = {
           .order('created_at', { ascending: false })
           .limit(limit);
         
-         if (error) {
-           if (import.meta.env.DEV) {
-             console.error('Error fetching recent analyses:', error);
-           }
+        if (error) {
+          console.error('Error fetching recent analyses:', error);
           return { data: [], error };
         }
         
         return { data: data || [], error };
-       } catch (error) {
-         if (import.meta.env.DEV) {
-           console.error('Error in analyses.getRecent:', error);
-         }
+      } catch (error) {
+        console.error('Error in analyses.getRecent:', error);
         return { data: [], error };
       }
     },
@@ -333,14 +317,12 @@ export const db = {
             .from('cv_analyses')
             .delete()
             .eq('id', analysisId);
-           if (error) throw error;
+          if (error) throw error;
           return { error: null as any };
         });
         return result;
-       } catch (error) {
-         if (import.meta.env.DEV) {
-           console.error('Error in analyses.delete:', error);
-         }
+      } catch (error) {
+        console.error('Error in analyses.delete:', error);
         return { error } as any;
       }
     },
@@ -516,18 +498,14 @@ export const utils = {
         analysis_id: analysisId,
       });
 
-         if (transactionError) {
-         if (import.meta.env.DEV) {
-           console.error('Errore nella creazione della transazione:', transactionError);
-         }
+      if (transactionError) {
+        console.error('Errore nella creazione della transazione:', transactionError);
         // Non bloccare l'operazione per errori di logging
       }
 
       return { success: true };
-       } catch (error) {
-         if (import.meta.env.DEV) {
-           console.error('Errore nella deduzione del credito:', error);
-         }
+    } catch (error) {
+      console.error('Errore nella deduzione del credito:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Errore sconosciuto' };
     }
   },
