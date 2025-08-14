@@ -44,8 +44,10 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then(response => {
-          const clone = response.clone();
-          caches.open(STATIC_CACHE).then(cache => cache.put(request, clone));
+          if (request.method === 'GET' && response && response.ok) {
+            const clone = response.clone();
+            caches.open(STATIC_CACHE).then(cache => cache.put(request, clone)).catch(() => {});
+          }
           return response;
         })
         .catch(() => caches.match(request))
@@ -67,10 +69,10 @@ self.addEventListener('fetch', (event) => {
       fetch(request)
         .then(response => {
           // Cache successful responses
-          if (response.ok) {
+          if (request.method === 'GET' && response && response.ok) {
             const responseClone = response.clone();
             caches.open(API_CACHE)
-              .then(cache => cache.put(request, responseClone));
+              .then(cache => cache.put(request, responseClone)).catch(() => {});
           }
           return response;
         })
@@ -88,8 +90,10 @@ self.addEventListener('fetch', (event) => {
       .then(response => {
         const fetchPromise = fetch(request)
           .then(fetchResponse => {
-            caches.open(CACHE_NAME)
-              .then(cache => cache.put(request, fetchResponse.clone()));
+            if (request.method === 'GET' && fetchResponse && fetchResponse.ok) {
+              caches.open(CACHE_NAME)
+                .then(cache => cache.put(request, fetchResponse.clone())).catch(() => {});
+            }
             return fetchResponse;
           });
         
