@@ -250,9 +250,6 @@ const AnalysisPage: React.FC = () => {
       setFileUpload(prev => ({ ...prev, error: 'Selezione non valida. Scegli un file PDF.' }));
       showError('Selezione non valida. Scegli un file PDF.');
     }
-    // Svuota il valore per permettere di riselezionare lo stesso file
-    // e assicurare che il prossimo onChange scatti sempre
-    e.currentTarget.value = '';
   };
 
   const handleFileSelection = async (file: File) => {

@@ -182,13 +182,13 @@ const FileUploadCard: React.FC<FileUploadCardProps> = ({
               </div>
             </div>
 
-            {/* Input nascosto */}
+            {/* Input file: visivamente nascosto (sr-only) anziché display:none per affidabilità su mobile */}
             <input
               ref={fileInputRef}
               type="file"
               accept="application/pdf,.pdf"
               onChange={onFileInputChange}
-              className="hidden"
+              className="sr-only"
               aria-label="Seleziona file CV"
             />
           </div>
