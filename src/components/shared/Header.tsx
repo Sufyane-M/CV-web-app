@@ -304,7 +304,11 @@ const Header: React.FC = () => {
                   <Link
                     key={item.name}
                     to={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsMobileMenuOpen(false);
+                      navigate(item.href);
+                    }}
                     className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       isActive
                         ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
