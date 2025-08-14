@@ -11,6 +11,9 @@ importers:
       '@heroicons/react':
         specifier: ^2.1.5
         version: 2.2.0(react@19.1.1)
+      '@stripe/stripe-js':
+        specifier: ^7.8.0
+        version: 7.8.0
       '@supabase/supabase-js':
         specifier: ^2.53.0
         version: 2.54.0
@@ -453,6 +456,10 @@ packages:
     resolution: {integrity: sha512-CvUo2ixeIQGtF6WvuB87XWqPQkoFAFqW+HUo/WzHwuHDvIwZCtjdWXoYCcr06iKGydiqTclC4jU/TNObC/xKZg==}
     cpu: [x64]
     os: [win32]
+
+  '@stripe/stripe-js@7.8.0':
+    resolution: {integrity: sha512-DNXRfYUgkZlrniQORbA/wH8CdFRhiBSE0R56gYU0V5vvpJ9WZwvGrz9tBAZmfq2aTgw6SK7mNpmTizGzLWVezw==}
+    engines: {node: '>=12.16'}
 
   '@supabase/auth-js@2.71.1':
     resolution: {integrity: sha512-mMIQHBRc+SKpZFRB2qtupuzulaUhFYupNyxqDj5Jp/LyPvcWvjaJzZzObv6URtL/O6lPxkanASnotGtNpS3H2Q==}
@@ -1528,6 +1535,8 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.46.2':
     optional: true
+
+  '@stripe/stripe-js@7.8.0': {}
 
   '@supabase/auth-js@2.71.1':
     dependencies:

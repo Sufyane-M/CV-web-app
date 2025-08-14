@@ -21,9 +21,8 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.1.5",
-    
+    "@stripe/stripe-js": "^7.8.0",
     "@supabase/supabase-js": "^2.53.0",
-    
     "clsx": "^2.1.1",
     "lucide-react": "^0.536.0",
     "react": "^19.1.0",
