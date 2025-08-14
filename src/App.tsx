@@ -28,6 +28,7 @@ const PaymentCancelPage = lazy(() => import('./pages/PaymentCancelPage'));
 // Components
 import Layout from './components/shared/Layout';
 import Loading from './components/ui/Loading';
+import ScrollToTop from './components/shared/ScrollToTop';
 
 // Protected Route Component
 interface ProtectedRouteProps {
@@ -188,6 +189,7 @@ const App: React.FC = () => {
             <Router>
               <PrefetchProvider>
                 <div className="min-h-screen bg-background text-text-primary transition-colors duration-200">
+                  <ScrollToTop behavior="auto" />
                   <AppRoutes />
                 </div>
               </PrefetchProvider>
