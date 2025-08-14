@@ -105,6 +105,19 @@ const AnalysisPage: React.FC = () => {
       analysisId: completedAnalysis.id,
       error: null,
     }));
+    // Consumo analisi gratuita al completamento valido
+    try {
+      if (user && completedAnalysis.analysis_type === 'limited') {
+        const res = await creditService.consumeFreeAnalysis(user.id);
+        if (!res.success && import.meta.env.DEV) {
+          console.warn('Consumo analisi gratuita non riuscito:', res.error);
+        }
+      }
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.warn('Errore nel consumo dell\'analisi gratuita:', err);
+      }
+    }
     // Detrazione credito al completamento (solo per analisi a pagamento), idempotente lato DB
     try {
       if (user && completedAnalysis.analysis_type !== 'limited') {
