@@ -34,6 +34,8 @@ const BUNDLES = {
 
 // Create checkout session
 router.options('/create-checkout-session', (req, res) => {
+  const origin = req.headers.origin || '*';
+  res.set('Access-Control-Allow-Origin', origin);
   res.set('Access-Control-Allow-Methods', 'POST,OPTIONS');
   res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Stripe-Signature');
   res.set('Access-Control-Max-Age', '86400');
