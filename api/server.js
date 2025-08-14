@@ -5,42 +5,33 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// CORS configuration for production
+// CORS configuration (allow list via env)
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
+  origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      'http://localhost:5173', // Development
-      'http://localhost:3000', // Alternative dev port
-      'https://cv-plum-ten.vercel.app', // Production frontend
-      'https://cv-4sp1.vercel.app', // API domain (self-reference)
-    ];
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+    if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'stripe-signature'],
-  preflightContinue: false,
-  optionsSuccessStatus: 200
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Stripe-Signature', 'stripe-signature'],
+  optionsSuccessStatus: 204,
 };
 
 // Middleware
 app.use(cors(corsOptions));
-
-// Explicit OPTIONS handling for Vercel
-app.options('*', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', 'https://cv-plum-ten.vercel.app');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, stripe-signature');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.status(200).end();
+app.options('*', cors(corsOptions));
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (!allowedOrigins.length || (origin && allowedOrigins.includes(origin))) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+  }
+  res.header('Vary', 'Origin');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Stripe-Signature, stripe-signature');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
 });
 
 // For Stripe webhooks, we need raw body
