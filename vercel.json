@@ -1,17 +1,8 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "vite.config.ts", "use": "@vercel/static-build", "config": {} }
-  ],
   "framework": "vite",
-  "env": {
-    "VITE_SUPABASE_URL": "",
-    "VITE_SUPABASE_ANON_KEY": "",
-    "VITE_APP_URL": "",
-    "VITE_API_BASE_URL": ""
-  },
-  "routes": [
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
 
