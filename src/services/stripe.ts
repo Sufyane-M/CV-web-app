@@ -39,7 +39,7 @@ export const createCheckoutSession = async (bundleId: BundleId, userId: string) 
       throw new Error('Invalid bundle selected');
     }
 
-    const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api';
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
     const response = await fetch(`${apiBaseUrl}/stripe/create-checkout-session`, {
       method: 'POST',
       headers: {
@@ -82,7 +82,7 @@ export const createCheckoutSession = async (bundleId: BundleId, userId: string) 
 // Verify payment session
 export const verifyPaymentSession = async (sessionId: string) => {
   try {
-    const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api';
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
     const response = await fetch(`${apiBaseUrl}/stripe/verify-session`, {
       method: 'POST',
       headers: {

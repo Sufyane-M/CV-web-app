@@ -44,10 +44,8 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then(response => {
-          if (request.method === 'GET' && response && response.ok) {
-            const clone = response.clone();
-            caches.open(STATIC_CACHE).then(cache => cache.put(request, clone)).catch(() => {});
-          }
+          const clone = response.clone();
+          caches.open(STATIC_CACHE).then(cache => cache.put(request, clone));
           return response;
         })
         .catch(() => caches.match(request))
@@ -63,16 +61,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network First per API calls (solo stessa origin, evita cross-origin per CORS)
-  if ((url.origin === self.location.origin && url.pathname.startsWith('/api/')) || url.hostname.includes('supabase')) {
+  // Network First per API calls
+  if (url.pathname.startsWith('/api/') || url.hostname.includes('supabase')) {
     event.respondWith(
       fetch(request)
         .then(response => {
           // Cache successful responses
-          if (request.method === 'GET' && response && response.ok) {
+          if (response.ok) {
             const responseClone = response.clone();
             caches.open(API_CACHE)
-              .then(cache => cache.put(request, responseClone)).catch(() => {});
+              .then(cache => cache.put(request, responseClone));
           }
           return response;
         })
@@ -90,10 +88,8 @@ self.addEventListener('fetch', (event) => {
       .then(response => {
         const fetchPromise = fetch(request)
           .then(fetchResponse => {
-            if (request.method === 'GET' && fetchResponse && fetchResponse.ok) {
-              caches.open(CACHE_NAME)
-                .then(cache => cache.put(request, fetchResponse.clone())).catch(() => {});
-            }
+            caches.open(CACHE_NAME)
+              .then(cache => cache.put(request, fetchResponse.clone()));
             return fetchResponse;
           });
         

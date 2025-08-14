@@ -80,12 +80,9 @@ class RUMCollector {
     this.buffer = [];
 
     try {
-      // Use the API base URL from environment; if not set, skip sending in production
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL as string | undefined;
-      if (!apiBaseUrl) {
-        return;
-      }
-
+      // Use the correct API base URL from environment
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+      
       await fetch(`${apiBaseUrl}/rum`, {
         method: 'POST',
         headers: {
@@ -120,13 +117,10 @@ class RUMCollector {
       if (this.buffer.length > 0) {
         // Use sendBeacon for reliable delivery
         try {
-          const apiBaseUrl = import.meta.env.VITE_API_BASE_URL as string | undefined;
-          if (apiBaseUrl) {
-            navigator.sendBeacon(
-              `${apiBaseUrl}/rum`,
-              JSON.stringify({ metrics: this.buffer })
-            );
-          }
+          navigator.sendBeacon(
+            '/api/rum',
+            JSON.stringify({ metrics: this.buffer })
+          );
         } catch {}
       }
     });

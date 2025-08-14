@@ -1,35 +1,3 @@
-# Deploy su Vercel
-
-## Prerequisiti
-- Account Vercel
-- Variabili d'ambiente per Supabase e API
-
-## Variabili d'ambiente
-Configura in Vercel (Project Settings → Environment Variables):
-- VITE_SUPABASE_URL
-- VITE_SUPABASE_ANON_KEY
-- VITE_APP_URL (es. https://tuo-dominio.vercel.app)
-- VITE_API_BASE_URL (es. https://la-tua-api.vercel.app/api oppure endpoint esterno)
-
-## Build command
-```
-pnpm install
-pnpm build
-```
-
-## Output directory
-```
-dist
-```
-
-## Note
-- Il Service Worker è registrato solo in produzione.
-- Le chiamate verso API usano VITE_API_BASE_URL; se non impostato, le funzionalità RUM e pagamenti vengono saltate.
-- Backend separato su Vercel:
-  - Crea nuovo progetto con root `api/`
-  - Aggiungi file `api/api/[...path].js` (già incluso) per esporre Express come funzione serverless
-  - Imposta env: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
-  - Usa `VITE_API_BASE_URL` nel frontend puntando a `https://<tuo-progetto-api>.vercel.app/api`
 # 🚀 Analizzatore CV con AI
 
 Un'applicazione web moderna per l'analisi intelligente dei CV utilizzando l'intelligenza artificiale. Aiuta i candidati a ottimizzare i loro curriculum vitae per superare i sistemi ATS (Applicant Tracking System) e migliorare le loro possibilità di essere selezionati.
@@ -134,7 +102,7 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
 
 # API
-VITE_API_BASE_URL=http://localhost:3001/api
+VITE_API_BASE_URL=/api
 ```
 
 ### 4. Setup Supabase
@@ -326,9 +294,19 @@ VITE_DEV_MODE=false
 ## 🚀 Deploy
 
 ### Vercel (Raccomandato)
-1. Connetti il repository a Vercel
-2. Configura le variabili d'ambiente
-3. Deploy automatico ad ogni push
+1. Connetti il repository a Vercel (un solo progetto)
+2. Build Command: `pnpm build` — Output Directory: `dist`
+3. Le API sono deployate come Serverless Functions in `api/[...path].js`
+4. Configura le variabili d'ambiente in Vercel (Project Settings → Environment Variables):
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+   - `VITE_STRIPE_PUBLISHABLE_KEY`
+   - `VITE_API_BASE_URL=/api`
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `STRIPE_SECRET_KEY`
+   - `STRIPE_WEBHOOK_SECRET`
+5. Configura il webhook Stripe all'endpoint: `https://<tuo-dominio>/api/stripe/webhook`
 
 ### Netlify
 1. Connetti il repository a Netlify

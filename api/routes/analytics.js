@@ -1,4 +1,4 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 
 // Store performance metrics
@@ -98,4 +98,4 @@ router.get('/export', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
