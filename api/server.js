@@ -7,19 +7,41 @@ const PORT = process.env.PORT || 3001;
 
 // CORS configuration for production
 const corsOptions = {
-  origin: [
-    'http://localhost:5173', // Development
-    'http://localhost:3000', // Alternative dev port
-    'https://cv-plum-ten.vercel.app', // Production frontend
-    'https://cv-4sp1.vercel.app', // API domain (self-reference)
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:5173', // Development
+      'http://localhost:3000', // Alternative dev port
+      'https://cv-plum-ten.vercel.app', // Production frontend
+      'https://cv-4sp1.vercel.app', // API domain (self-reference)
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'stripe-signature'],
+  preflightContinue: false,
+  optionsSuccessStatus: 200
 };
 
 // Middleware
 app.use(cors(corsOptions));
+
+// Explicit OPTIONS handling for Vercel
+app.options('*', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', 'https://cv-plum-ten.vercel.app');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, stripe-signature');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.status(200).end();
+});
 
 // For Stripe webhooks, we need raw body
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
