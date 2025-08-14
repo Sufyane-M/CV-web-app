@@ -2,6 +2,7 @@
   "version": 2,
   "framework": "vite",
   "rewrites": [
+    { "source": "/api/(.*)", "destination": "https://cv-4sp1.vercel.app/api/$1" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
