@@ -20,6 +20,7 @@
     "ci:perf": "npm run build:optimized && npm run lighthouse:ci && npm run perf:budget"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@supabase/supabase-js": "^2.53.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.536.0",
