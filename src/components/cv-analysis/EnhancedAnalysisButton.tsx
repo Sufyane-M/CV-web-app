@@ -110,8 +110,7 @@ const EnhancedAnalysisButton: React.FC<EnhancedAnalysisButtonProps> = ({
   };
 
   const buttonContent = getButtonContent();
-  // Enable when a file is present and not analyzing. Eligibility is revalidated server-side anyway.
-  const isButtonDisabled = !hasFile || isAnalyzing || (eligibility ? !eligibility.canAnalyze : false);
+  const isButtonDisabled = !canAnalyze || checkingEligibility;
 
   return (
     <Card className={cn(
