@@ -47,6 +47,12 @@ const EnhancedAnalysisResults: React.FC<EnhancedAnalysisResultsProps> = ({
 
   // Memoizza i dati processati
   const processedData = useMemo(() => {
+    const toArray = (value: any): any[] => {
+      if (Array.isArray(value)) return value;
+      if (value === undefined || value === null) return [];
+      return [value];
+    };
+
     const scores = {
       overall: analysis.overall_score || 0,
       ats: analysis.ats_score || 0,
@@ -57,14 +63,19 @@ const EnhancedAnalysisResults: React.FC<EnhancedAnalysisResultsProps> = ({
     const hasScores = Object.values(scores).some(score => score > 0);
     const averageScore = hasScores ? Math.round(Object.values(scores).filter(s => s > 0).reduce((a, b) => a + b, 0) / Object.values(scores).filter(s => s > 0).length) : 0;
     
-    const suggestions = analysis.suggestions || { critical: [], warnings: [], successes: [] };
-    const totalSuggestions = (suggestions.critical?.length || 0) + (suggestions.warnings?.length || 0) + (suggestions.successes?.length || 0);
+    const rawSuggestions: any = analysis.suggestions ?? {};
+    const normalizedSuggestions = {
+      critical: toArray((rawSuggestions && typeof rawSuggestions === 'object' && 'critical' in rawSuggestions) ? (rawSuggestions as any).critical : (Array.isArray(rawSuggestions) ? rawSuggestions : undefined)),
+      warnings: toArray((rawSuggestions && typeof rawSuggestions === 'object' && 'warnings' in rawSuggestions) ? (rawSuggestions as any).warnings : undefined),
+      successes: toArray((rawSuggestions && typeof rawSuggestions === 'object' && 'successes' in rawSuggestions) ? (rawSuggestions as any).successes : undefined)
+    };
+    const totalSuggestions = (normalizedSuggestions.critical.length) + (normalizedSuggestions.warnings.length) + (normalizedSuggestions.successes.length);
     
     return {
       scores,
       hasScores,
       averageScore,
-      suggestions,
+      suggestions: normalizedSuggestions,
       totalSuggestions,
       hasMatchAnalysis: !!analysis.match_analysis && analysis.match_analysis !== 0
     };
@@ -440,6 +451,8 @@ const SuggestionPreviewCard: React.FC<{
   const config = getTypeConfig(type);
   const Icon = config.icon;
 
+  const itemsArray = Array.isArray(items) ? items : (items != null ? [items] : []);
+
   return (
     <Card className={`${config.border} ${config.bg} hover:shadow-md transition-all duration-200`}>
       <CardContent className="p-6">
@@ -454,7 +467,7 @@ const SuggestionPreviewCard: React.FC<{
         </div>
         
         <div className="space-y-2">
-          {items.slice(0, 2).map((item, index) => (
+          {itemsArray.slice(0, 2).map((item, index) => (
             <div key={index} className={`p-3 bg-white dark:bg-gray-800 rounded-lg ${isLimited && index > 0 ? 'blur-sm opacity-50' : ''}`}>
               <p className="text-sm font-medium text-gray-900 dark:text-white">
                 {typeof item === 'string' ? item : item.title || 'Suggerimento'}
@@ -522,8 +535,9 @@ const SuggestionSection: React.FC<{
   onUpgrade: () => void;
 }> = ({ title, items, type, isLimited, onUpgrade }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const visibleItems = isLimited ? 1 : (isExpanded ? items : items.slice(0, 3));
-  const hasMore = items.length > (isLimited ? 1 : 3);
+  const itemsArray = Array.isArray(items) ? items : (items != null ? [items] : []);
+  const visibleItems = isLimited ? itemsArray.slice(0, 1) : (isExpanded ? itemsArray : itemsArray.slice(0, 3));
+  const hasMore = itemsArray.length > (isLimited ? 1 : 3);
 
   const getTypeConfig = (type: string) => {
     const configs = {
@@ -562,7 +576,7 @@ const SuggestionSection: React.FC<{
             </div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h3>
             <Badge variant={type === 'critical' ? 'danger' : type === 'warning' ? 'warning' : 'success'}>
-              {items.length}
+              {itemsArray.length}
             </Badge>
           </div>
           {hasMore && !isLimited && (
@@ -584,10 +598,10 @@ const SuggestionSection: React.FC<{
           ))}
           
           {/* Blurred items for limited analysis */}
-          {isLimited && items.length > 1 && (
+          {isLimited && itemsArray.length > 1 && (
             <BlurOverlay isBlurred={true} onUpgrade={onUpgrade}>
               <div className="space-y-4">
-                {items.slice(1).map((item, index) => (
+                {itemsArray.slice(1).map((item, index) => (
                   <SuggestionItem key={index + 1} item={item} type={type} />
                 ))}
               </div>

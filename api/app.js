@@ -1,13 +1,10 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 
 import stripeRouter from './routes/stripe.js';
 import analyticsRouter from './routes/analytics.js';
 import alertsRouter from './routes/alerts.js';
 import rumRouter from './routes/rum.js';
-
-dotenv.config();
 
 const app = express();
 

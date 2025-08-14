@@ -45,7 +45,13 @@ KeywordTag.displayName = 'KeywordTag';
 
 // Analisi di Corrispondenza ottimizzata con memoization
 const MatchAnalysisDisplay = memo<{ analysis: any }>(({ analysis }) => {
-    const { matchScore, keywordsFound, keywordsMissing } = analysis;
+    const { matchScore, keywordsFound, keywordsMissing } = analysis || {};
+    const foundArray = Array.isArray(keywordsFound)
+        ? keywordsFound
+        : (keywordsFound != null ? [keywordsFound] : []);
+    const missingArray = Array.isArray(keywordsMissing)
+        ? keywordsMissing
+        : (keywordsMissing != null ? [keywordsMissing] : []);
     
     // Memoizza i calcoli pesanti
     const circleData = useMemo(() => {
@@ -90,8 +96,8 @@ const MatchAnalysisDisplay = memo<{ analysis: any }>(({ analysis }) => {
                     <div>
                         <h3 className="font-semibold text-slate-300 mb-2">Parole Chiave Trovate</h3>
                         <div className="flex flex-wrap gap-2">
-                            {keywordsFound?.length > 0 ? (
-                                keywordsFound.map((k, i) => <KeywordTag key={`found-${i}`} keyword={k} type="found" />)
+                            {foundArray.length > 0 ? (
+                                foundArray.map((k, i) => <KeywordTag key={`found-${i}`} keyword={k} type="found" />)
                             ) : (
                                 <p className="text-sm text-slate-500 italic">Nessuna parola chiave corrispondente trovata.</p>
                             )}
@@ -100,8 +106,8 @@ const MatchAnalysisDisplay = memo<{ analysis: any }>(({ analysis }) => {
                      <div>
                         <h3 className="font-semibold text-slate-300 mb-2">Parole Chiave Mancanti</h3>
                         <div className="flex flex-wrap gap-2">
-                           {keywordsMissing?.length > 0 ? (
-                                keywordsMissing.map((k, i) => <KeywordTag key={`missing-${i}`} keyword={k} type="missing" />)
+                           {missingArray.length > 0 ? (
+                                missingArray.map((k, i) => <KeywordTag key={`missing-${i}`} keyword={k} type="missing" />)
                             ) : (
                                 <p className="text-sm text-slate-500 italic">Ottimo! Nessuna parola chiave rilevante mancante.</p>
                             )}
@@ -120,6 +126,21 @@ const ScoreCard: React.FC<{ title: string; score?: number }> = ({ title, score }
   if (score === undefined || score === null || score === 0) return null;
   const scoreColorClass = score >= 80 ? 'text-green-400' : score >= 60 ? 'text-yellow-400' : 'text-red-400';
   const borderColorClass = score >= 80 ? 'border-green-500/40' : score >= 60 ? 'border-yellow-500/40' : 'border-red-500/40';
+  const toArray = (value: any): any[] => {
+    if (Array.isArray(value)) return value;
+    if (value === undefined || value === null) return [];
+    return [value];
+  };
+
+  const normalizedSuggestions = useMemo(() => {
+    const raw = suggestions ?? {};
+    return {
+      critical: toArray((raw && typeof raw === 'object' && 'critical' in raw) ? (raw as any).critical : (Array.isArray(raw) ? raw : undefined)),
+      warnings: toArray((raw && typeof raw === 'object' && 'warnings' in raw) ? (raw as any).warnings : undefined),
+      successes: toArray((raw && typeof raw === 'object' && 'successes' in raw) ? (raw as any).successes : undefined)
+    };
+  }, [suggestions]);
+
   return (
     <div className={`bg-slate-800/60 p-4 rounded-lg border-t-4 ${borderColorClass} flex flex-col justify-center items-center text-center shadow-md`}>
       <span className="text-sm font-medium text-slate-400">{title}</span>
@@ -209,13 +230,13 @@ const JsonResponseDisplay = memo<JsonResponseDisplayProps>(({ data, onReset }) =
           <div className="space-y-3">
             <h2 className="text-2xl font-bold text-slate-200">Suggerimenti</h2>
             <div className="grid gap-3">
-              {suggestions?.critical?.slice(0, 5).map((item: any, idx: number) => (
+              {normalizedSuggestions.critical.slice(0, 5).map((item: any, idx: number) => (
                 <SuggestionCard key={`critical-${idx}`} item={item} type="critical" />
               ))}
-              {suggestions?.warnings?.slice(0, 5).map((item: any, idx: number) => (
+              {normalizedSuggestions.warnings.slice(0, 5).map((item: any, idx: number) => (
                 <SuggestionCard key={`warning-${idx}`} item={item} type="warning" />
               ))}
-              {suggestions?.successes?.slice(0, 5).map((item: any, idx: number) => (
+              {normalizedSuggestions.successes.slice(0, 5).map((item: any, idx: number) => (
                 <SuggestionCard key={`success-${idx}`} item={item} type="success" />
               ))}
             </div>
