@@ -63,11 +63,11 @@ const AnalysisPage: React.FC = () => {
   // Hook realtime per l'analisi
   const handleRealtimeComplete = useCallback(async (completedAnalysis: CVAnalysis) => {
     setAnalysis(completedAnalysis);
-    setAnalysisState({
+    setAnalysisState(prev => ({
       step: 'results',
       analysisId: completedAnalysis.id,
       error: null,
-    });
+    }));
     // Detrazione credito al completamento (solo per analisi a pagamento), idempotente lato DB
     try {
       if (user && completedAnalysis.analysis_type !== 'limited') {
@@ -114,6 +114,16 @@ const AnalysisPage: React.FC = () => {
   useEffect(() => {
     if (realtimeAnalysis && realtimeAnalysis.status === 'completed') {
       setAnalysis(realtimeAnalysis);
+      setAnalysisState(prev => (
+        prev.step === 'results'
+          ? prev
+          : {
+              ...prev,
+              step: 'results',
+              analysisId: realtimeAnalysis.id,
+              error: null,
+            }
+      ));
     }
   }, [realtimeAnalysis]);
 

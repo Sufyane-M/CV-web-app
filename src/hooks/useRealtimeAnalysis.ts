@@ -100,7 +100,7 @@ export function useRealtimeAnalysis({
     hasCompletedRef.current = false;
   }, [analysisId]);
 
-  // Funzione per avviare il polling fallback
+  // Funzione per avviare il polling (sempre attivo come fallback)
   const startPolling = useCallback(() => {
     if (isPollingRef.current || !enablePollingFallback) return;
     
@@ -191,13 +191,23 @@ export function useRealtimeAnalysis({
     }
   }, [analysisId, fetchAnalysis, handleComplete, handleStatusChange, handleError]);
 
+  // Avvia sempre il polling quando abbiamo un analysisId (fallback continuo)
+  useEffect(() => {
+    if (!analysisId || !enablePollingFallback) return;
+    startPolling();
+    return () => {
+      stopPolling();
+    };
+  }, [analysisId, enablePollingFallback, startPolling, stopPolling]);
+
   // Subscription realtime
   useEffect(() => {
-    if (!analysisId || !analysis) return;
+    if (!analysisId) return;
 
-    // Non sottoscrivere se già completata
-    if (analysis.status === 'completed') {
+    // Se abbiamo già un'analisi completata, evita sottoscrizione e assicurati risultati
+    if (analysis && analysis.status === 'completed') {
       setIsConnected(false);
+      handleComplete(analysis);
       return;
     }
 
@@ -240,7 +250,7 @@ export function useRealtimeAnalysis({
         
         if (status === 'SUBSCRIBED') {
           setIsConnected(true);
-          stopPolling(); // Ferma il polling se la subscription è attiva
+          // Non fermare il polling: lo teniamo come fallback continuo
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           setIsConnected(false);
           if (import.meta.env.DEV) {
@@ -254,7 +264,7 @@ export function useRealtimeAnalysis({
 
     subscriptionRef.current = channel;
 
-    // Timeout per fallback se la subscription non si connette
+    // Timeout per fallback se la subscription non si connette (ridondante ma innocuo)
     const fallbackTimeout = setTimeout(() => {
       if (!isConnected) {
         if (import.meta.env.DEV) {
