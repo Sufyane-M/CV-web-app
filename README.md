@@ -25,7 +25,11 @@ dist
 ## Note
 - Il Service Worker è registrato solo in produzione.
 - Le chiamate verso API usano VITE_API_BASE_URL; se non impostato, le funzionalità RUM e pagamenti vengono saltate.
-- Per usare l'API Node interna su Vercel, deploya la cartella `api/` come progetto separato (Serverless Functions) oppure esponi un endpoint esterno e impostalo in VITE_API_BASE_URL.
+- Backend separato su Vercel:
+  - Crea nuovo progetto con root `api/`
+  - Aggiungi file `api/api/[...path].js` (già incluso) per esporre Express come funzione serverless
+  - Imposta env: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+  - Usa `VITE_API_BASE_URL` nel frontend puntando a `https://<tuo-progetto-api>.vercel.app/api`
 # 🚀 Analizzatore CV con AI
 
 Un'applicazione web moderna per l'analisi intelligente dei CV utilizzando l'intelligenza artificiale. Aiuta i candidati a ottimizzare i loro curriculum vitae per superare i sistemi ATS (Applicant Tracking System) e migliorare le loro possibilità di essere selezionati.

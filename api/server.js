@@ -37,9 +37,12 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-app.listen(PORT, () => {
-  console.log(`API server running on port ${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
-});
+// Start server only when run directly (not when imported by Vercel function)
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`API server running on port ${PORT}`);
+    console.log(`Health check: http://localhost:${PORT}/health`);
+  });
+}
 
 module.exports = app;
