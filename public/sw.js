@@ -61,8 +61,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network First per API calls
-  if (url.pathname.startsWith('/api/') || url.hostname.includes('supabase')) {
+  // Network First per API calls (solo stessa origin, evita cross-origin per CORS)
+  if ((url.origin === self.location.origin && url.pathname.startsWith('/api/')) || url.hostname.includes('supabase')) {
     event.respondWith(
       fetch(request)
         .then(response => {
