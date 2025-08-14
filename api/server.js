@@ -7,13 +7,10 @@ const PORT = process.env.PORT || 3001;
 
 // CORS configuration (allow list via env)
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+const dynamicOrigin = allowedOrigins.length ? allowedOrigins : true; // true = reflect request origin
 const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
+  origin: dynamicOrigin,
+  credentials: false,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Stripe-Signature', 'stripe-signature'],
   optionsSuccessStatus: 204,
@@ -24,12 +21,13 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use((req, res, next) => {
   const origin = req.headers.origin;
+  // With origin: true, cors will set the correct header, but ensure fallback
   if (!allowedOrigins.length || (origin && allowedOrigins.includes(origin))) {
-    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
   }
-  res.header('Vary', 'Origin');
-  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Stripe-Signature, stripe-signature');
+  res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Stripe-Signature, stripe-signature');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
