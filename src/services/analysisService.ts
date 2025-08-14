@@ -53,7 +53,7 @@ class AnalysisService {
   private readonly webhookUrl =
     (import.meta as any).env?.VITE_AI_WEBHOOK_URL ||
     (import.meta as any).env?.VITE_N8N_WEBHOOK_URL ||
-    'https://sufyane1023.app.n8n.cloud/webhook/prova';
+    'https://sufyane1023.app.n8n.cloud/webhook-test/prova';
 
   /**
    * Invia i dati dell'analisi al servizio di elaborazione
