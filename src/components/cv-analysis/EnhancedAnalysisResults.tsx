@@ -57,8 +57,14 @@ const EnhancedAnalysisResults: React.FC<EnhancedAnalysisResultsProps> = ({
     const hasScores = Object.values(scores).some(score => score > 0);
     const averageScore = hasScores ? Math.round(Object.values(scores).filter(s => s > 0).reduce((a, b) => a + b, 0) / Object.values(scores).filter(s => s > 0).length) : 0;
     
-    const suggestions = analysis.suggestions || { critical: [], warnings: [], successes: [] };
-    const totalSuggestions = (suggestions.critical?.length || 0) + (suggestions.warnings?.length || 0) + (suggestions.successes?.length || 0);
+    const normalizeToArray = (value: any) => Array.isArray(value) ? value : (value != null ? [value] : []);
+    const rawSuggestions: any = analysis.suggestions || {};
+    const suggestions = {
+      critical: normalizeToArray(rawSuggestions.critical),
+      warnings: normalizeToArray(rawSuggestions.warnings),
+      successes: normalizeToArray(rawSuggestions.successes)
+    };
+    const totalSuggestions = suggestions.critical.length + suggestions.warnings.length + suggestions.successes.length;
     
     return {
       scores,
@@ -522,8 +528,9 @@ const SuggestionSection: React.FC<{
   onUpgrade: () => void;
 }> = ({ title, items, type, isLimited, onUpgrade }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const visibleItems = isLimited ? 1 : (isExpanded ? items : items.slice(0, 3));
-  const hasMore = items.length > (isLimited ? 1 : 3);
+  const safeItems = Array.isArray(items) ? items : (items != null ? [items] : []);
+  const visibleItems = isLimited ? safeItems.slice(0, 1) : (isExpanded ? safeItems : safeItems.slice(0, 3));
+  const hasMore = safeItems.length > (isLimited ? 1 : 3);
 
   const getTypeConfig = (type: string) => {
     const configs = {
@@ -562,7 +569,7 @@ const SuggestionSection: React.FC<{
             </div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h3>
             <Badge variant={type === 'critical' ? 'danger' : type === 'warning' ? 'warning' : 'success'}>
-              {items.length}
+              {safeItems.length}
             </Badge>
           </div>
           {hasMore && !isLimited && (
@@ -572,7 +579,7 @@ const SuggestionSection: React.FC<{
               onClick={() => setIsExpanded(!isExpanded)}
               rightIcon={isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             >
-              {isExpanded ? 'Mostra meno' : `Mostra tutti (${items.length})`}
+              {isExpanded ? 'Mostra meno' : `Mostra tutti (${safeItems.length})`}
             </Button>
           )}
         </div>
@@ -584,10 +591,10 @@ const SuggestionSection: React.FC<{
           ))}
           
           {/* Blurred items for limited analysis */}
-          {isLimited && items.length > 1 && (
+          {isLimited && safeItems.length > 1 && (
             <BlurOverlay isBlurred={true} onUpgrade={onUpgrade}>
               <div className="space-y-4">
-                {items.slice(1).map((item, index) => (
+                {safeItems.slice(1).map((item, index) => (
                   <SuggestionItem key={index + 1} item={item} type={type} />
                 ))}
               </div>
