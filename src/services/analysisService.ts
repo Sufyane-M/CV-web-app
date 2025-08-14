@@ -41,6 +41,7 @@ export interface AnalysisRequest {
   can_upgrade: boolean;
   upgraded_from?: string;
   results?: any;
+  analysisId?: string;
   success?: boolean;
   error?: string;
   analysisType?: 'free' | 'paid';

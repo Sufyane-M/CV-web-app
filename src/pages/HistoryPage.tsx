@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Loading from '../components/ui/Loading';
 import RecentAnalysesList from '../components/dashboard/RecentAnalysesList';
 import { analysisService } from '../services/analysisService';
-import type { CVAnalysis } from '../types';
+import type { CVAnalysis } from '../types/index';
 
 const HistoryPage: React.FC = () => {
   const { user } = useAuth();

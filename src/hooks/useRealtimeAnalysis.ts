@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { getSupabase } from '../services/supabase';
-import type { CVAnalysis } from '../types';
+import type { CVAnalysis } from '../types/index';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface UseRealtimeAnalysisOptions {

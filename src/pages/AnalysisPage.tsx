@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, RotateCcw, Eye, EyeOff, CreditCard, FileText, AlertTriangle, CheckCircle, X } from 'lucide-react';
+import { Play, Eye, EyeOff, CreditCard, FileText, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../hooks/useNotificationMigration';
 import Button from '../components/ui/Button';
@@ -13,9 +13,10 @@ import Badge from '../components/ui/Badge';
 import Loading from '../components/ui/Loading';
 import { db, utils } from '../services/supabase';
 import { analysisService } from '../services/analysisService';
+import type { AnalysisResult } from '../services/analysisService';
 import { creditService } from '../services/creditService';
 import { useRealtimeAnalysis } from '../hooks/useRealtimeAnalysis';
-import type { CVAnalysis, UserProfile } from '../types';
+import type { CVAnalysis, UserProfile } from '../types/index';
 import { formatDate } from '../utils/formatters';
 import ErrorFallback from '../components/ErrorFallback';
 import EnhancedAnalysisResults from '../components/cv-analysis/EnhancedAnalysisResults';
@@ -60,8 +61,44 @@ const AnalysisPage: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   
+  // Valida risultati analisi: se quasi tutto è null/vuoto, consideriamo errore
+  const isInvalidAnalysisResult = useCallback((a: CVAnalysis | null | undefined): boolean => {
+    if (!a) return true;
+    const execNull = a.executive_summary == null || a.executive_summary === '';
+    const overallNull = a.overall_score == null;
+    const contentNull = a.content_score == null;
+    const designNull = a.design_score == null;
+    const sugg: any = a.suggestions as any;
+    const suggestionsEmpty = (
+      sugg == null ||
+      (Array.isArray(sugg) && sugg.length === 0) ||
+      (
+        typeof sugg === 'object' && !Array.isArray(sugg) &&
+        (
+          (!Array.isArray(sugg?.critical) || sugg.critical.length === 0) &&
+          (!Array.isArray(sugg?.warnings) || sugg.warnings.length === 0) &&
+          (!Array.isArray(sugg?.successes) || sugg.successes.length === 0)
+        )
+      )
+    );
+    return execNull && overallNull && contentNull && designNull && suggestionsEmpty;
+  }, []);
+
   // Hook realtime per l'analisi
   const handleRealtimeComplete = useCallback(async (completedAnalysis: CVAnalysis) => {
+    // Se i risultati sono nulli/incompleti, mostra errore e NON detrarre crediti
+    if (isInvalidAnalysisResult(completedAnalysis)) {
+      setAnalysis(completedAnalysis);
+      setAnalysisState(prev => ({
+        step: 'error',
+        analysisId: completedAnalysis.id,
+        error: 'Analisi non riuscita: il risultato non contiene dati validi. Nessun credito è stato detratto.',
+      }));
+      showError('Analisi non riuscita: risultati incompleti. Nessun credito detratto.');
+      await refreshProfile();
+      return;
+    }
+
     setAnalysis(completedAnalysis);
     setAnalysisState(prev => ({
       step: 'results',
@@ -85,7 +122,7 @@ const AnalysisPage: React.FC = () => {
     }
     await refreshProfile();
     showSuccess('Analisi completata con successo!', { duration: 5000, dismissible: true });
-  }, [refreshProfile, showSuccess]);
+  }, [refreshProfile, showSuccess, showError, user, isInvalidAnalysisResult]);
 
   const handleRealtimeError = useCallback((errorMsg: string) => {
     setAnalysisState(prev => ({
@@ -114,18 +151,33 @@ const AnalysisPage: React.FC = () => {
   useEffect(() => {
     if (realtimeAnalysis && realtimeAnalysis.status === 'completed') {
       setAnalysis(realtimeAnalysis);
-      setAnalysisState(prev => (
-        prev.step === 'results'
-          ? prev
-          : {
-              ...prev,
-              step: 'results',
-              analysisId: realtimeAnalysis.id,
-              error: null,
-            }
-      ));
+      if (isInvalidAnalysisResult(realtimeAnalysis)) {
+        setAnalysisState(prev => {
+          if (prev.step === 'error') return prev;
+          return {
+            ...prev,
+            step: 'error',
+            analysisId: realtimeAnalysis.id,
+            error: 'Analisi non riuscita: il risultato non contiene dati validi.',
+          };
+        });
+        if (analysisState.step !== 'error') {
+          showError('Analisi non riuscita: risultati incompleti.');
+        }
+      } else {
+        setAnalysisState(prev => (
+          prev.step === 'results'
+            ? prev
+            : {
+                ...prev,
+                step: 'results',
+                analysisId: realtimeAnalysis.id,
+                error: null,
+              }
+        ));
+      }
     }
-  }, [realtimeAnalysis]);
+  }, [realtimeAnalysis, isInvalidAnalysisResult, showError, analysisState.step]);
 
   // File upload handlers
   const handleDragOver = (e: React.DragEvent) => {
@@ -282,7 +334,7 @@ const AnalysisPage: React.FC = () => {
     
     try {
       // Utilizza il nuovo servizio di analisi con logica dei crediti
-      const result = await analysisService.processAnalysis({
+      const result: AnalysisResult = await analysisService.processAnalysis({
         cvFile: fileUpload.file,
         jobDescription: jobDescription,
         userId: user.id
@@ -376,7 +428,7 @@ const AnalysisPage: React.FC = () => {
   // Job Description is rendered inline to preserve component identity and focus
 
   // Determina se l'analisi può essere avviata
-  const canAnalyze = fileUpload.file && !isAnalyzing && user && profile;
+  const canAnalyze = !!fileUpload.file && !isAnalyzing && !!user && !!profile;
 
   // Processing Component
   const ProcessingCard = () => {
@@ -427,37 +479,7 @@ const AnalysisPage: React.FC = () => {
     );
   };
 
-  // Error Component
-  const ErrorCard = () => {
-    return (
-      <Card className="border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
-        <CardContent className="p-6 text-center">
-          <X className="h-12 w-12 text-red-600 dark:text-red-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-red-900 dark:text-red-100 mb-2">
-            Errore durante l'analisi
-          </h2>
-          <p className="text-red-700 dark:text-red-300 mb-6">
-            {analysisState.error || 'Si è verificato un errore imprevisto'}
-          </p>
-          <div className="space-x-4">
-            <Button
-              variant="outline"
-              onClick={resetAnalysis}
-              leftIcon={<RotateCcw className="h-4 w-4" />}
-            >
-              Riprova
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/dashboard')}
-            >
-              Torna alla Dashboard
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
+  // Error UI gestita da ErrorFallback nel render principale
 
   // Main render
   if (!user || !profile) {

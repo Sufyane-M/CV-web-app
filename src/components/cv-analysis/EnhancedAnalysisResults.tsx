@@ -23,7 +23,7 @@ import Button from '../ui/Button';
 import Card, { CardHeader, CardContent } from '../ui/Card';
 import Badge from '../ui/Badge';
 import { formatDate } from '../../utils/formatters';
-import type { CVAnalysis } from '../../types';
+import type { CVAnalysis } from '../../types/index';
 
 interface EnhancedAnalysisResultsProps {
   analysis: CVAnalysis;
