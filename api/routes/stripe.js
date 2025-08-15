@@ -16,22 +16,25 @@ const supabase = createClient(
 );
 
 // Bundle configurations (must match frontend)
+// Configurazione dei bundle di crediti
 const BUNDLES = {
   starter: {
     id: 'starter',
-    name: 'Starter Pack',
+    name: 'Pacchetto Starter',
+    priceId: process.env.STRIPE_STARTER_PRICE_ID,
+    credits: 5,
     price: 4.99,
-    credits: 2,
     currency: 'EUR',
-    description: 'Perfect for trying out our CV analysis service'
+    description: 'Ideale per provare il nostro servizio di analisi CV'
   },
   value: {
     id: 'value',
-    name: 'Value Pack',
+    name: 'Pacchetto Value',
+    priceId: process.env.STRIPE_VALUE_PRICE_ID,
+    credits: 10,
     price: 9.99,
-    credits: 5,
     currency: 'EUR',
-    description: 'Best value for regular users'
+    description: 'Miglior valore per utilizzo regolare'
   }
 };
 

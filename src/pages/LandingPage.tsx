@@ -6,6 +6,7 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Logo from '../components/ui/Logo';
 import { formatPrice } from '../utils/formatters';
+import { BUNDLES } from '../services/stripe';
 
 const LandingPage: React.FC = () => {
   const features = [
@@ -30,6 +31,12 @@ const LandingPage: React.FC = () => {
       description: 'Ottieni feedback immediato sul tuo CV con analisi powered by AI in pochi secondi.',
     },
   ];
+
+  // Calcola il prezzo minimo per analisi basato sui bundle (2 crediti per analisi)
+  const minPricePerAnalysis = Math.min(
+    (2 * BUNDLES.starter.price) / BUNDLES.starter.credits,
+    (2 * BUNDLES.value.price) / BUNDLES.value.credits
+  );
 
   const testimonials = [
     {
@@ -67,9 +74,9 @@ const LandingPage: React.FC = () => {
       popular: false,
     },
     {
-      name: 'Analisi Completa',
-      price: 5,
-      description: 'Per professionisti seri',
+      name: 'Bundle Crediti',
+      price: minPricePerAnalysis,
+      description: 'Il modo più conveniente per analisi complete (2 crediti per analisi)',
       features: [
         'Analisi completa del CV',
         'Punteggi dettagliati',
@@ -78,7 +85,7 @@ const LandingPage: React.FC = () => {
         'Supporto prioritario',
         'Cronologia analisi',
       ],
-      cta: 'Acquista Ora',
+      cta: 'Vedi Pacchetti',
       popular: true,
     },
   ];

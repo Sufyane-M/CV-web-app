@@ -125,7 +125,7 @@ const AnalysisPage: React.FC = () => {
         if (!error && data && data.length > 0) {
           const newCredits = (data[0] as any).new_credits;
           if (typeof newCredits === 'number') {
-            showSuccess(`1 credito detratto. Nuovo saldo: ${newCredits}`, { duration: 6000, dismissible: true });
+            showSuccess(`2 crediti detratti. Nuovo saldo: ${newCredits}`, { duration: 6000, dismissible: true });
           }
         }
       }
@@ -569,7 +569,6 @@ const AnalysisPage: React.FC = () => {
                     <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-4">{jobDescription}</p>
                   </div>
                 )}
-                // Removed preview section
                 {showTips && (
                   <div className="text-xs text-gray-500 dark:text-gray-400">
                     Suggerimento: per risultati migliori, assicurati che il tuo CV sia leggibile e ben strutturato. Evita immagini di testo e privilegia PDF esportati dal tuo editor.

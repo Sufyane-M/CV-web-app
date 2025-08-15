@@ -13,19 +13,19 @@ const getStripe = () => {
 export const BUNDLES = {
   starter: {
     id: 'starter',
-    name: 'Pacchetto Base',
+    name: 'Pacchetto Starter',
     price: 4.99,
-    credits: 2,
+    credits: 5,
     currency: 'EUR',
-    description: 'Ideale per chi vuole testare il nostro servizio'
+    description: 'Ideale per provare il nostro servizio di analisi CV'
   },
   value: {
     id: 'value',
-    name: 'Pacchetto Premium',
+    name: 'Pacchetto Value',
     price: 9.99,
-    credits: 5,
+    credits: 10,
     currency: 'EUR',
-    description: 'La scelta migliore per chi cerca il massimo valore'
+    description: 'Miglior valore per utilizzo regolare'
   }
 } as const;
 

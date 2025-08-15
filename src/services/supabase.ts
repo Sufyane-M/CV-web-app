@@ -463,7 +463,7 @@ export const utils = {
   hasCredits: async (userId: string): Promise<boolean> => {
     const { data, error } = await db.profiles.get(userId);
     if (error || !data) return false;
-    return data.credits > 0;
+    return data.credits >= 2;
   },
 
   // Deduct credit and create transaction
@@ -481,7 +481,7 @@ export const utils = {
 
       // Deduct credit
       const { error: deductError } = await db.profiles.update(userId, {
-        credits: profile.credits - 1,
+        credits: profile.credits - 2,
         updated_at: new Date().toISOString(),
       });
 
@@ -493,7 +493,7 @@ export const utils = {
       const { error: transactionError } = await db.creditTransactions.create({
         user_id: userId,
         type: 'consumption',
-        amount: -1,
+        amount: -2,
         description,
         analysis_id: analysisId,
       });

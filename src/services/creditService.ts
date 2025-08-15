@@ -25,16 +25,16 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
     id: 'starter',
     name: 'Pacchetto Base',
     price: 499, // €4,99
-    credits: 2,
-    description: 'Due analisi complete del CV',
+    credits: 5,
+    description: 'Cinque analisi complete del CV',
     stripePriceId: 'price_1RtUD3CrDiPBhim5deeUX1IW' // Starter Pack
   },
   {
     id: 'premium',
     name: 'Pacchetto Premium', 
     price: 999, // €9,99
-    credits: 5,
-    description: 'Cinque analisi complete del CV',
+    credits: 10,
+    description: 'Dieci analisi complete del CV',
     stripePriceId: 'price_1RtUD8CrDiPBhim5Ba5aMNou' // Value Pack
   }
 ];
@@ -73,11 +73,11 @@ class CreditService {
       }
 
       // Se ha crediti disponibili
-      if (creditsAvailable > 0) {
+      if (creditsAvailable >= 2) {
         return {
           canAnalyze: true,
           analysisType: 'paid',
-          creditsRequired: 1,
+          creditsRequired: 2,
           creditsAvailable,
           hasFreeAnalysisAvailable: false
         };
@@ -88,7 +88,7 @@ class CreditService {
         canAnalyze: false,
         analysisType: 'paid',
         reason: 'Crediti insufficienti. Acquista un pacchetto per continuare.',
-        creditsRequired: 1,
+        creditsRequired: 2,
         creditsAvailable: 0,
         hasFreeAnalysisAvailable: false
       };
@@ -141,7 +141,7 @@ class CreditService {
   }
 
   /**
-   * Consuma un credito per analisi a pagamento
+   * Consuma due crediti per analisi a pagamento
    */
   async consumeCredit(userId: string, analysisId: string): Promise<{ success: boolean; error?: string }> {
     try {
@@ -151,13 +151,13 @@ class CreditService {
         return { success: false, error: 'Profilo utente non trovato' };
       }
 
-      if ((profile.credits || 0) <= 0) {
+      if ((profile.credits || 0) < 2) {
         return { success: false, error: 'Crediti insufficienti' };
       }
 
       // Aggiorna i crediti
       const { error: updateError } = await db.profiles.update(userId, {
-        credits: (profile.credits || 0) - 1,
+        credits: (profile.credits || 0) - 2,
         updated_at: new Date().toISOString()
       });
 
@@ -170,7 +170,7 @@ class CreditService {
       const { error: transactionError } = await db.creditTransactions.create({
         user_id: userId,
         type: 'consumption',
-        amount: -1,
+        amount: -2,
         description: 'Analisi CV a pagamento',
         analysis_id: analysisId
       });

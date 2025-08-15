@@ -199,8 +199,8 @@ export const CreditBadge: React.FC<CreditBadgeProps> = ({
 }) => {
   const getVariant = (credits: number): BadgeProps['variant'] => {
     if (credits >= 5) return 'success';
-    if (credits >= 2) return 'warning';
-    if (credits >= 1) return 'info';
+    if (credits >= 4) return 'warning';
+    if (credits >= 2) return 'info';
     return 'danger';
   };
 
