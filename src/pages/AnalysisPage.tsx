@@ -7,7 +7,7 @@ import Button from '../components/ui/Button';
 import Card, { CardHeader, CardContent, CardFooter } from '../components/ui/Card';
 import HowItWorks from '../components/cv-analysis/HowItWorks';
 import JobDescription from '../components/cv-analysis/JobDescription';
-import FileUploadCard from '../components/cv-analysis/FileUploadCard';
+import PDFUploader from '../components/cv-analysis/PDFUploader';
 import EnhancedAnalysisButton from '../components/cv-analysis/EnhancedAnalysisButton';
 import Badge from '../components/ui/Badge';
 import Loading from '../components/ui/Loading';
@@ -21,6 +21,7 @@ import { formatDate } from '../utils/formatters';
 import ErrorFallback from '../components/ErrorFallback';
 import EnhancedAnalysisResults from '../components/cv-analysis/EnhancedAnalysisResults';
 import '../styles/enhanced-analysis.css';
+import { useAnalysisDraft } from '../contexts/AnalysisDraftContext';
 
 // Types
 interface AnalysisState {
@@ -40,7 +41,13 @@ const AnalysisPage: React.FC = () => {
   const { user, profile, refreshProfile } = useAuth();
   const { showSuccess, showError, showInfo } = useNotification();
   const fileInputRef = useRef<HTMLInputElement>(null);
-    
+  
+  // Ref per debouncing del file selection
+  // const fileSelectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // const isFileSelectionInProgressRef = useRef<boolean>(false);
+  // Ref per garantire idempotenza della detrazione crediti lato client (evita doppie detrazioni in caso di eventi duplicati)
+  const deductedAnalysisIdsRef = useRef<Set<string>>(new Set());
+  
   // State
   const [analysisState, setAnalysisState] = useState<AnalysisState>({
     step: 'upload',
@@ -48,17 +55,13 @@ const AnalysisPage: React.FC = () => {
     error: null,
   });
   
-  const [fileUpload, setFileUpload] = useState<FileUploadState>({
-    file: null,
-    isDragging: false,
-    error: null,
-  });
-  
-  const [jobDescription, setJobDescription] = useState('');
+  const { draftData, setFile: setDraftFile, setJobDescription } = useAnalysisDraft();
+  // const [isDragging, setIsDragging] = useState(false);
+  // const [fileError, setFileError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<CVAnalysis | null>(null);
   const [showTutorial, setShowTutorial] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  // const [isUploading, setIsUploading] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   
   // Valida risultati analisi: se quasi tutto è null/vuoto, consideriamo errore
@@ -86,7 +89,7 @@ const AnalysisPage: React.FC = () => {
 
   // Hook realtime per l'analisi
   const handleRealtimeComplete = useCallback(async (completedAnalysis: CVAnalysis) => {
-    // Se i risultati sono nulli/incompleti, mostra errore e NON detrarre crediti
+    // Se i risultati sono nulli/incompleti, mostra errore e NON dettarre crediti
     if (isInvalidAnalysisResult(completedAnalysis)) {
       setAnalysis(completedAnalysis);
       setAnalysisState(prev => ({
@@ -118,19 +121,28 @@ const AnalysisPage: React.FC = () => {
         console.warn('Errore nel consumo dell\'analisi gratuita:', err);
       }
     }
-    // Detrazione credito al completamento (solo per analisi a pagamento), idempotente lato DB
+    // Detrazione credito al completamento (solo per analisi a pagamento), ora atomica lato client (-2) con guardia idempotente
     try {
       if (user && completedAnalysis.analysis_type !== 'limited') {
-        const { data, error } = await db.profiles.deductOnCompletion(user.id, completedAnalysis.id);
-        if (!error && data && data.length > 0) {
-          const newCredits = (data[0] as any).new_credits;
-          if (typeof newCredits === 'number') {
-            showSuccess(`2 crediti detratti. Nuovo saldo: ${newCredits}`, { duration: 6000, dismissible: true });
+        // Evita doppie detrazioni se il callback viene invocato più volte per la stessa analisi
+        if (deductedAnalysisIdsRef.current.has(completedAnalysis.id)) {
+          console.warn('Detrazione già effettuata per questa analisi, skip.');
+        } else {
+          const res = await utils.deductCreditWithTransaction(
+            user.id,
+            completedAnalysis.id,
+            'Analisi CV a pagamento'
+          );
+          if (res.success) {
+            deductedAnalysisIdsRef.current.add(completedAnalysis.id);
+            showSuccess('2 crediti detratti.', { duration: 6000, dismissible: true });
+          } else if (import.meta.env.DEV) {
+            console.warn('Detrazione crediti fallita:', res.error);
           }
         }
       }
     } catch (err) {
-      // Non bloccare l'esperienza utente; la funzione è idempotente e può essere ritentata
+      // Non bloccare l'esperienza utente; la funzione può essere ritentata
       console.warn('Detrazione credito al completamento non riuscita:', err);
     }
     await refreshProfile();
@@ -192,123 +204,31 @@ const AnalysisPage: React.FC = () => {
     }
   }, [realtimeAnalysis, isInvalidAnalysisResult, showError, analysisState.step]);
 
-  // File upload handlers
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    try {
-      if (e.dataTransfer) {
-        e.dataTransfer.dropEffect = 'copy';
-      }
-    } catch {}
-    setFileUpload(prev => ({ ...prev, isDragging: true }));
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setFileUpload(prev => ({ ...prev, isDragging: false }));
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setFileUpload(prev => ({ ...prev, isDragging: false }));
-    
-    const dt = e.dataTransfer;
-    const fileList = Array.from(dt.files || []);
-    let candidate: File | null = null;
-    
-    if (fileList.length > 0) {
-      candidate = fileList[0];
-    } else if (dt.items && dt.items.length > 0) {
-      const itemFiles = Array.from(dt.items)
-        .filter(item => item.kind === 'file')
-        .map(item => item.getAsFile())
-        .filter((f): f is File => !!f);
-      candidate = itemFiles[0] || null;
-    }
-    
-    if (candidate) {
-      handleFileSelection(candidate);
-    } else {
-      setFileUpload(prev => ({ ...prev, error: 'Nessun file rilevato. Trascina un file PDF o clicca per selezionarlo.' }));
-      showError('Nessun file rilevato. Trascina un file PDF o clicca per selezionarlo.');
-    }
-    
-    try {
-      if (dt.items) dt.items.clear();
-      dt.clearData();
-    } catch {}
-  };
-
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files && e.target.files.length > 0 ? e.target.files[0] : null;
-    if (file) {
-      handleFileSelection(file);
-    } else {
-      setFileUpload(prev => ({ ...prev, error: 'Selezione non valida. Scegli un file PDF.' }));
-      showError('Selezione non valida. Scegli un file PDF.');
-    }
-  };
-
-  const handleFileSelection = async (file: File) => {
-    setIsUploading(true);
-    setFileUpload({
-      file: null,
-      isDragging: false,
-      error: 'Caricamento in corso...',
-    });
-
-    try {
-      // Validazione file (singolo tentativo)
-      const validation = analysisService.validatePdfFile(file);
-      if (!validation.isValid) {
-        throw new Error(validation.error || 'File non valido');
-      }
-
-      if (file.size === 0) {
-        throw new Error('Il file è vuoto o non accessibile. Seleziona un PDF valido.');
-      }
-
-      // Successo: aggiorna stato e notifica
-      setFileUpload({
-        file,
-        isDragging: false,
-        error: null,
-      });
-      setIsUploading(false);
-      showSuccess('File caricato con successo!');
-
-    } catch (error: any) {
-      const errorMessage = error?.message || 'Errore durante il caricamento del file.';
-      setFileUpload({
-        file: null,
-        isDragging: false,
-        error: errorMessage,
-      });
-      showError(errorMessage);
-      setIsUploading(false);
-    }
-  };
+  // File upload handlers (rimossi: gestiti internamente da PDFUploader)
+  // const handleDragOver = (e: React.DragEvent) => { /* removed */ };
+  // const handleDragLeave = (e: React.DragEvent) => { /* removed */ };
+  // const _deprecatedHandleDrop = (e: React.DragEvent) => { /* removed */ };
+  // const _deprecatedHandleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => { /* removed */ };
+  // const handleFileSelection = useCallback(async (file: File) => { /* removed */ }, []);
+  // const handleFileInputChangeDebounced = useCallback((e: React.ChangeEvent<HTMLInputElement>) => { /* removed */ }, []);
+  // const handleDropDebounced = useCallback((e: React.DragEvent) => { /* removed */ }, []);
+  
+  // Cleanup timeout al dismount (rimosso)
+  // useEffect(() => { return () => { if (fileSelectionTimeoutRef.current) { clearTimeout(fileSelectionTimeoutRef.current); } }; }, []);
 
   const removeFile = () => {
-    setFileUpload({
-      file: null,
-      isDragging: false,
-      error: null,
-    });
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-    // Non aprire automaticamente il selettore dei file per evitare il doppio allegato
-    // In caso serva, l’utente potrà cliccare manualmente su "Seleziona file".
+    setDraftFile(null);
+    // setIsDragging(false);
+    // setFileError(null);
+    // if (fileInputRef.current) {
+    //   fileInputRef.current.value = '';
+    // }
   };
 
   // Analysis handlers
   const startAnalysis = async () => {
-    if (!fileUpload.file || isUploading) {
-      showError('Attendi il completamento del caricamento del file prima di iniziare l\'analisi.');
+    if (!draftData.file) {
+      showError('Seleziona un file prima di iniziare l\'analisi.');
       return;
     }
     if (!user || !profile) {
@@ -317,14 +237,14 @@ const AnalysisPage: React.FC = () => {
     }
 
     // Validazione ulteriore lato client
-    const validation = analysisService.validatePdfFile(fileUpload.file);
+    const validation = analysisService.validatePdfFile(draftData.file);
     if (!validation.isValid) {
-      setFileUpload(prev => ({ ...prev, error: validation.error || 'File non valido' }));
+      // setFileError(validation.error || 'File non valido');
       showError(validation.error || 'File non valido');
       return;
     }
-    if (fileUpload.file.size === 0) {
-      setFileUpload(prev => ({ ...prev, error: 'Il file è vuoto o non accessibile.' }));
+    if (draftData.file.size === 0) {
+      // setFileError('Il file è vuoto o non accessibile.');
       showError('Il file è vuoto o non accessibile.');
       return;
     }
@@ -334,8 +254,8 @@ const AnalysisPage: React.FC = () => {
     try {
       // Utilizza il nuovo servizio di analisi con logica dei crediti
       const result: AnalysisResult = await analysisService.processAnalysis({
-        cvFile: fileUpload.file,
-        jobDescription: jobDescription,
+        cvFile: draftData.file,
+        jobDescription: draftData.jobDescription,
         userId: user.id
       });
       
@@ -397,7 +317,7 @@ const AnalysisPage: React.FC = () => {
     setAnalysis(null);
     // Non rimuovere il file automaticamente: manteniamo l’allegato per evitare un secondo caricamento
     // removeFile();
-    setJobDescription('');
+    // Non cancellare la job description per mantenere la bozza persistente
   };
 
 
@@ -411,24 +331,22 @@ const AnalysisPage: React.FC = () => {
 
   // File Upload Component (ora esterno)
   const renderFileUploadCard = () => (
-    <FileUploadCard
-      file={fileUpload.file}
-      isDragging={fileUpload.isDragging}
-      error={fileUpload.error}
-      onFileSelect={() => fileInputRef.current?.click()}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
+    <PDFUploader
+      file={draftData.file}
+      error={null}
+      onFileSelect={(file) => {
+        setDraftFile(file);
+        showSuccess('File caricato con successo!');
+      }}
       onRemoveFile={removeFile}
-      fileInputRef={fileInputRef}
-      onFileInputChange={handleFileInputChange}
+      className="mb-6"
     />
   );
 
   // Job Description is rendered inline to preserve component identity and focus
 
   // Determina se l'analisi può essere avviata
-  const canAnalyze = !!fileUpload.file && !isAnalyzing && !!user && !!profile;
+  const canAnalyze = !!draftData.file && !isAnalyzing && !!user && !!profile;
 
   // Processing Component
   const ProcessingCard = () => {
@@ -556,17 +474,17 @@ const AnalysisPage: React.FC = () => {
                 <div className="mb-4">
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Dettagli file</h3>
                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                    <p className="truncate"><span className="font-medium">Nome:</span> {fileUpload.file?.name || '—'}</p>
-                    {fileUpload.file && (
-                      <p><span className="font-medium">Dimensione:</span> {(fileUpload.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    <p className="truncate"><span className="font-medium">Nome:</span> {draftData.file?.name || '—'}</p>
+                    {draftData.file && (
+                      <p><span className="font-medium">Dimensione:</span> {(draftData.file.size / 1024 / 1024).toFixed(2)} MB</p>
                     )}
                   </div>
                 </div>
 
-                {jobDescription && (
+                {draftData.jobDescription && (
                   <div className="mb-6">
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Descrizione lavoro</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-4">{jobDescription}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-4">{draftData.jobDescription}</p>
                   </div>
                 )}
                 {showTips && (
@@ -605,12 +523,12 @@ const AnalysisPage: React.FC = () => {
           <>
             <TutorialCard />
             {renderFileUploadCard()}
-            <JobDescription value={jobDescription} onChange={setJobDescription} />
+            <JobDescription value={draftData.jobDescription} onChange={setJobDescription} />
             <EnhancedAnalysisButton
               onStartAnalysis={startAnalysis}
               canAnalyze={canAnalyze}
               isAnalyzing={isAnalyzing}
-              hasFile={!!fileUpload.file}
+              hasFile={!!draftData.file}
             />
           </>
         )}

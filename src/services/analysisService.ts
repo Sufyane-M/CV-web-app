@@ -60,29 +60,48 @@ class AnalysisService {
    * Invia i dati dell'analisi al servizio di elaborazione
    */
   async submitAnalysis(request: AnalysisRequest): Promise<boolean> {
-    const formData = new FormData();
-    formData.append('file', request.file);
-    formData.append('job_description', request.job_description);
-    formData.append('analysis_id', request.analysis_id);
-    formData.append('user_id', request.user_id);
-    formData.append('file_name', request.file_name);
-    formData.append('scan_type', request.scan_type);
-
     const maxAttempts = 3;
     const baseDelayMs = 300;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
+        // Ricreare FormData per ogni tentativo per evitare problemi di stream esauriti
+        const formData = new FormData();
+        formData.append('file', request.file);
+        formData.append('job_description', request.job_description);
+        formData.append('analysis_id', request.analysis_id);
+        formData.append('user_id', request.user_id);
+        formData.append('file_name', request.file_name);
+        formData.append('scan_type', request.scan_type);
+
+        if (import.meta.env.DEV) {
+          console.log('[SUBMIT_DEBUG] Tentativo invio', attempt, {
+            url: this.webhookUrl,
+            fileName: request.file_name,
+            fileSize: request.file.size,
+            scanType: request.scan_type,
+            analysisId: request.analysis_id
+          });
+        }
+
         const response = await fetch(this.webhookUrl, {
           method: 'POST',
           body: formData,
+          headers: {
+            // Evitare caching intermedio su alcuni proxy/browser
+            'Cache-Control': 'no-cache',
+          },
         });
 
-        if (response.ok) return true;
+        if (response.ok) {
+          if (import.meta.env.DEV) console.log('[SUBMIT_DEBUG] Invio riuscito al tentativo', attempt);
+          return true;
+        }
 
         // Retry on transient errors
         if (response.status >= 500 || response.status === 429) {
           const wait = baseDelayMs * Math.pow(2, attempt - 1);
+          if (import.meta.env.DEV) console.warn('[SUBMIT_DEBUG] Status temporaneo', response.status, 'retry tra', wait, 'ms');
           await new Promise(res => setTimeout(res, wait));
           continue;
         }

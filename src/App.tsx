@@ -7,6 +7,7 @@ import { UnifiedNotificationProvider } from './contexts/UnifiedNotificationConte
 import { UnifiedModalProvider } from './components/providers/UnifiedModalProvider';
 import { useAuth } from './contexts/AuthContext';
 import { PrefetchProvider } from './hooks/usePrefetch';
+import { AnalysisDraftProvider } from './contexts/AnalysisDraftContext';
 // MemoryOptimizer è ora applicato a livello root in modo condizionale; non importato qui
 // sposta qualsiasi lavoro non critico fuori dal critical path
 
@@ -186,14 +187,16 @@ const App: React.FC = () => {
       <UnifiedNotificationProvider>
         <UnifiedModalProvider>
           <AuthProvider>
-            <Router>
-              <PrefetchProvider>
-                <div className="min-h-screen bg-background text-text-primary transition-colors duration-200">
-                  <ScrollToTop behavior="auto" />
-                  <AppRoutes />
-                </div>
-              </PrefetchProvider>
-            </Router>
+            <AnalysisDraftProvider>
+              <Router>
+                <PrefetchProvider>
+                  <div className="min-h-screen bg-background text-text-primary transition-colors duration-200">
+                    <ScrollToTop behavior="auto" />
+                    <AppRoutes />
+                  </div>
+                </PrefetchProvider>
+              </Router>
+            </AnalysisDraftProvider>
           </AuthProvider>
         </UnifiedModalProvider>
       </UnifiedNotificationProvider>
