@@ -35,6 +35,12 @@ const Header: React.FC = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [hasFreeAnalysisAvailable, setHasFreeAnalysisAvailable] = useState(false);
 
+  // Close menus on route change (ensures hamburger links work and UI resets)
+  React.useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setIsUserMenuOpen(false);
+  }, [location.pathname]);
+
   // Fetch free analysis availability
   React.useEffect(() => {
     const fetchFreeAnalysisAvailability = async () => {
@@ -195,6 +201,9 @@ const Header: React.FC = () => {
                     size="sm"
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                     className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    aria-expanded={isUserMenuOpen}
+                    aria-haspopup="menu"
+                    aria-label="Menu utente"
                   >
                     <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-medium">
                       {getUserInitials()}
@@ -267,6 +276,9 @@ const Header: React.FC = () => {
                   size="sm"
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                   className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  aria-expanded={isMobileMenuOpen}
+                  aria-controls="mobile-navigation"
+                  aria-label="Apri menu di navigazione"
                 >
                   {isMobileMenuOpen ? (
                     <XMarkIcon className="h-5 w-5" />
@@ -295,7 +307,7 @@ const Header: React.FC = () => {
 
         {/* Mobile Navigation */}
         {user && isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 dark:border-gray-800 py-4">
+          <div className="md:hidden border-t border-gray-200 dark:border-gray-800 py-4 z-50 relative" id="mobile-navigation">
             <nav className="space-y-2">
               {navigationItems.map((item) => {
                 const Icon = item.icon;
@@ -304,16 +316,12 @@ const Header: React.FC = () => {
                   <Link
                     key={item.name}
                     to={item.href}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setIsMobileMenuOpen(false);
-                      navigate(item.href);
-                    }}
                     className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       isActive
                         ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
+                    onClick={() => setIsMobileMenuOpen(false)}
                   >
                     <Icon className="h-4 w-4 mr-3" />
                     {item.name}
