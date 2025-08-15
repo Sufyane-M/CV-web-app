@@ -1,3 +1,7 @@
+import dotenv from 'dotenv';
+// Ensure environment variables are loaded before using process.env
+dotenv.config();
+
 import express from 'express';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
@@ -78,51 +82,27 @@ router.post('/create-checkout-session', async (req, res) => {
             currency: bundle.currency.toLowerCase(),
             product_data: {
               name: bundle.name,
-              description: bundle.description,
             },
-            unit_amount: Math.round(bundle.price * 100), // Convert to cents
+            unit_amount: Math.round(bundle.price * 100)
           },
-          quantity: 1,
-        },
+          quantity: 1
+        }
       ],
       mode: 'payment',
-      success_url: successUrl,
-      cancel_url: cancelUrl,
       customer_email: user.email,
+      success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancelUrl,
       metadata: {
         userId,
         bundleId,
-        credits: bundle.credits.toString(),
-        planName: bundle.name,
-      },
+        credits: bundle.credits
+      }
     });
 
-    // Store pending transaction in database
-    const { error: transactionError } = await supabase
-      .from('payments')
-      .insert({
-        user_id: userId,
-        amount: Math.round(bundle.price * 100), // Convert to cents
-        currency: bundle.currency,
-        status: 'pending',
-        stripe_payment_intent_id: `pending_${session.id}`, // Temporary placeholder, will be updated by webhook
-        stripe_checkout_session_id: session.id,
-        credits_purchased: bundle.credits,
-        credits_added: bundle.credits,
-        metadata: {
-          bundle_name: bundle.name,
-          stripe_session_id: session.id,
-        },
-      });
-
-    if (transactionError) {
-      console.error('Error storing transaction:', transactionError);
-      // Continue anyway - webhook will handle the transaction
-    }
-
+    // Return the session id
     res.json({ sessionId: session.id });
   } catch (error) {
-    console.error('Checkout session creation error:', error);
+    console.error('Error creating checkout session:', error);
     res.status(500).json({ error: 'Failed to create checkout session' });
   }
 });
@@ -148,87 +128,37 @@ router.post('/verify-session', async (req, res) => {
       return res.status(400).json({ error: 'Payment not completed' });
     }
 
+
     // Get transaction from database
-    const { data: transaction, error: transactionError } = await supabase
-      .from('payments')
-      .select('*')
-      .eq('stripe_checkout_session_id', sessionId)
-      .single();
-
-    if (transactionError) {
-      console.error('Error fetching transaction:', transactionError);
-      return res.status(500).json({ error: 'Failed to verify transaction' });
-    }
-
-    // If transaction is still pending, process it now (for test sessions)
-    if (transaction.status === 'pending') {
-      console.log('Processing pending transaction:', sessionId);
-      
-      // Update transaction status
-      const { error: updateError } = await supabase
+    try {
+      const { data: transaction, error: transactionError } = await supabase
         .from('payments')
-        .update({
-          status: 'succeeded',
-          updated_at: new Date().toISOString(),
-          stripe_payment_intent_id: session.payment_intent || `completed_${session.id}`,
-        })
-        .eq('stripe_checkout_session_id', sessionId);
+        .select('*')
+        .eq('stripe_checkout_session_id', sessionId)
+        .single();
 
-      if (updateError) {
-        console.error('Error updating transaction:', updateError);
-      }
+      if (transactionError) {
+        console.warn('Non-blocking: error fetching transaction during verify-session:', transactionError);
+      } else if (transaction && transaction.status === 'pending') {
+        console.log('Processing pending transaction (marking succeeded only):', sessionId);
+        // Update transaction status; do NOT add credits here (handled by webhook)
+        const { error: updateError } = await supabase
+          .from('payments')
+          .update({
+            status: 'succeeded',
+            updated_at: new Date().toISOString(),
+            stripe_payment_intent_id: session.payment_intent || `completed_${session.id}`,
+          })
+          .eq('stripe_checkout_session_id', sessionId);
 
-      // Add credits to user account
-      const { userId, credits, planName } = session.metadata;
-      if (userId && credits) {
-        // Get current user data first
-        const { data: currentUser, error: getUserError } = await supabase
-          .from('user_profiles')
-          .select('credits, total_credits_purchased')
-          .eq('id', userId)
-          .single();
-
-        if (getUserError) {
-          console.error('Error getting user data:', getUserError);
-        } else {
-          // Update user credits directly
-          const newCredits = (currentUser.credits || 0) + parseInt(credits);
-          const newTotalPurchased = (currentUser.total_credits_purchased || 0) + parseInt(credits);
-          
-          const { error: creditError } = await supabase
-            .from('user_profiles')
-            .update({
-              credits: newCredits,
-              total_credits_purchased: newTotalPurchased,
-              last_payment_date: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', userId);
-
-          if (creditError) {
-            console.error('Error adding credits:', creditError);
-          } else {
-            console.log(`Added ${credits} credits to user ${userId}. New total: ${newCredits}`);
-          }
-        }
-
-        // Insert credit transaction record
-        const { error: transactionLogError } = await supabase
-          .from('credit_transactions')
-          .insert({
-            user_id: userId,
-            amount: parseInt(credits),
-            type: 'purchase',
-            description: `Purchase: ${planName}`,
-            created_at: new Date().toISOString(),
-          });
-
-        if (transactionLogError) {
-          console.error('Error logging credit transaction:', transactionLogError);
+        if (updateError) {
+          console.warn('Non-blocking: error updating transaction during verify-session:', updateError);
         }
       }
+    } catch (e) {
+      console.warn('Non-blocking: verify-session skipped DB ops due to error:', e);
     }
-
+    
     // Return verification result
     res.json({
       success: true,
@@ -239,7 +169,7 @@ router.post('/verify-session', async (req, res) => {
         currency: session.currency,
         metadata: session.metadata,
       },
-      transaction,
+      transaction: undefined,
       planName: session.metadata.planName || 'Unknown Plan',
       credits: parseInt(session.metadata.credits || '0'),
     });
@@ -262,18 +192,37 @@ router.post('/webhook', async (req, res) => {
   }
 
   // Handle the event
-  switch (event.type) {
-    case 'checkout.session.completed':
-      await handleCheckoutSessionCompleted(event.data.object);
-      break;
-    case 'payment_intent.succeeded':
-      await handlePaymentIntentSucceeded(event.data.object);
-      break;
-    case 'payment_intent.payment_failed':
-      await handlePaymentIntentFailed(event.data.object);
-      break;
-    default:
-      console.log(`Unhandled event type ${event.type}`);
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed':
+        await handleCheckoutSessionCompleted(event.data.object);
+        break;
+      case 'payment_intent.succeeded':
+        await handlePaymentIntentSucceeded(event.data.object);
+        break;
+      case 'payment_intent.payment_failed':
+        await handlePaymentIntentFailed(event.data.object);
+        break;
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
+  } finally {
+    // Log webhook event centrally (idempotent logging based on stripe_event_id)
+    try {
+      const { error: webhookError } = await supabase
+        .from('stripe_webhook_events')
+        .insert({
+          stripe_event_id: event.id,
+          event_type: event.type,
+          processed: true,
+          data: event.data?.object || null,
+        });
+      if (webhookError) {
+        console.error('Error logging webhook event:', webhookError);
+      }
+    } catch (e) {
+      console.error('Unexpected error logging webhook event:', e);
+    }
   }
 
   res.json({ received: true });
@@ -289,13 +238,70 @@ async function handleCheckoutSessionCompleted(session) {
       return;
     }
 
-    // Update transaction status
+    // Fetch current transaction to compute delta credits (idempotent)
+    const { data: transaction, error: txError } = await supabase
+      .from('payments')
+      .select('id, credits_purchased, credits_added')
+      .eq('stripe_checkout_session_id', session.id)
+      .single();
+
+    if (txError) {
+      console.error('Error fetching transaction for webhook:', txError);
+    }
+
+    const intended = (transaction?.credits_purchased ?? parseInt(credits)) || 0;
+    const alreadyAdded = transaction?.credits_added ?? 0;
+    const toAdd = Math.max(0, intended - alreadyAdded);
+
+    if (toAdd <= 0) {
+      // Nothing to add; ensure status is succeeded and payment_intent is saved
+      const { error: updateNoopError } = await supabase
+        .from('payments')
+        .update({
+          status: 'succeeded',
+          updated_at: new Date().toISOString(),
+          stripe_payment_intent_id: session.payment_intent,
+        })
+        .eq('stripe_checkout_session_id', session.id);
+      if (updateNoopError) {
+        console.error('Error updating transaction (noop):', updateNoopError);
+      }
+      console.log(`No credits to add for session ${session.id} (alreadyAdded=${alreadyAdded}, intended=${intended})`);
+      return;
+    }
+
+    // Add only the delta credits to user account (idempotent)
+    let creditError = null;
+    try {
+      const { error: e1 } = await supabase.rpc('add_user_credits', {
+        user_uuid: userId,
+        credits_to_add: toAdd,
+      });
+      creditError = e1;
+      if (creditError) {
+        // Fallback to update_user_credits function with correct parameters
+        const { error: e2 } = await supabase.rpc('update_user_credits', {
+          p_user_id: userId,
+          p_credits_to_add: toAdd,
+          p_payment_id: session.payment_intent
+        });
+        creditError = e2;
+      }
+    } catch (e) {
+      creditError = e;
+    }
+    if (creditError) {
+      console.error('Error adding credits (both functions failed):', creditError);
+    }
+
+    // Update transaction: status, payment_intent and credits_added incremented
     const { error: updateError } = await supabase
       .from('payments')
       .update({
         status: 'succeeded',
         updated_at: new Date().toISOString(),
         stripe_payment_intent_id: session.payment_intent,
+        credits_added: alreadyAdded + toAdd,
       })
       .eq('stripe_checkout_session_id', session.id);
 
@@ -303,33 +309,7 @@ async function handleCheckoutSessionCompleted(session) {
       console.error('Error updating transaction:', updateError);
     }
 
-    // Add credits to user account
-    const { error: creditError } = await supabase.rpc('add_user_credits', {
-      user_id: userId,
-      credit_amount: parseInt(credits),
-      transaction_type: 'purchase',
-      description: `Purchase: ${planName}`,
-    });
-
-    if (creditError) {
-      console.error('Error adding credits:', creditError);
-    }
-
-    // Log webhook event
-    const { error: webhookError } = await supabase
-      .from('stripe_webhook_events')
-      .insert({
-        event_id: session.id,
-        event_type: 'checkout.session.completed',
-        processed: true,
-        data: session,
-      });
-
-    if (webhookError) {
-      console.error('Error logging webhook event:', webhookError);
-    }
-
-    console.log(`Successfully processed checkout session: ${session.id}`);
+    console.log(`Successfully processed checkout session: ${session.id} (added ${toAdd} credits)`);
   } catch (error) {
     console.error('Error handling checkout session completed:', error);
   }

@@ -1,3 +1,8 @@
+import dotenv from 'dotenv';
+
+// Configure dotenv before importing modules that use process.env
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 
