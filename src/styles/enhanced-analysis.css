@@ -250,3 +250,11 @@
 .dark .suggestion-scroll::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
+
+/* Utility: multi-line clamp fallback (Tailwind plugin not required) */
+.line-clamp-4 {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

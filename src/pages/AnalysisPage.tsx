@@ -260,46 +260,35 @@ const AnalysisPage: React.FC = () => {
       error: 'Caricamento in corso...',
     });
 
-    const MAX_RETRIES = 3;
-    const RETRY_DELAY = 500;
-
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        // Validate file
-        const validation = analysisService.validatePdfFile(file);
-        if (!validation.isValid) {
-          throw new Error(validation.error || 'File non valido');
-        }
-        
-        if (file.size === 0) {
-          throw new Error('Il file è vuoto o non accessibile. Riprova selezionando un PDF valido.');
-        }
-
-        // Success
-        setFileUpload({
-          file,
-          isDragging: false,
-          error: null,
-        });
-        setIsUploading(false);
-        showSuccess('File caricato con successo!');
-        return;
-
-      } catch (error: any) {
-        if (attempt < MAX_RETRIES) {
-          setFileUpload(prev => ({ ...prev, error: `Tentativo ${attempt} fallito. Riprovo...` }));
-          await new Promise(res => setTimeout(res, RETRY_DELAY));
-        } else {
-          const errorMessage = error.message || 'Errore durante il caricamento del file.';
-          setFileUpload({
-            file: null,
-            isDragging: false,
-            error: errorMessage,
-          });
-          showError(errorMessage);
-          setIsUploading(false);
-        }
+    try {
+      // Validazione file (singolo tentativo)
+      const validation = analysisService.validatePdfFile(file);
+      if (!validation.isValid) {
+        throw new Error(validation.error || 'File non valido');
       }
+
+      if (file.size === 0) {
+        throw new Error('Il file è vuoto o non accessibile. Seleziona un PDF valido.');
+      }
+
+      // Successo: aggiorna stato e notifica
+      setFileUpload({
+        file,
+        isDragging: false,
+        error: null,
+      });
+      setIsUploading(false);
+      showSuccess('File caricato con successo!');
+
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Errore durante il caricamento del file.';
+      setFileUpload({
+        file: null,
+        isDragging: false,
+        error: errorMessage,
+      });
+      showError(errorMessage);
+      setIsUploading(false);
     }
   };
 
@@ -312,8 +301,8 @@ const AnalysisPage: React.FC = () => {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-    // Reimposta il focus per permettere subito una nuova selezione
-    fileInputRef.current?.click?.();
+    // Non aprire automaticamente il selettore dei file per evitare il doppio allegato
+    // In caso serva, l’utente potrà cliccare manualmente su "Seleziona file".
   };
 
   // Analysis handlers
@@ -406,7 +395,8 @@ const AnalysisPage: React.FC = () => {
       error: null,
     });
     setAnalysis(null);
-    removeFile();
+    // Non rimuovere il file automaticamente: manteniamo l’allegato per evitare un secondo caricamento
+    // removeFile();
     setJobDescription('');
   };
 
@@ -442,48 +432,152 @@ const AnalysisPage: React.FC = () => {
 
   // Processing Component
   const ProcessingCard = () => {
+    const steps = [
+      'Caricamento del file',
+      'Estrazione testo e dati',
+      'Analisi contenuti e keywords',
+      'Valutazione design e leggibilità',
+      'Generazione risultati e suggerimenti'
+    ];
+
+    const [stepIndex, setStepIndex] = useState(0);
+    const startTimeRef = useRef<number>(Date.now());
+    const [elapsedLabel, setElapsedLabel] = useState('0:00');
+
+    useEffect(() => {
+      setStepIndex(0);
+      startTimeRef.current = Date.now();
+
+      const stepIv = setInterval(() => {
+        setStepIndex((prev) => (prev + 1) % steps.length);
+      }, 5000);
+
+      const timeIv = setInterval(() => {
+        const sec = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        const m = Math.floor(sec / 60).toString();
+        const s = (sec % 60).toString().padStart(2, '0');
+        setElapsedLabel(`${m}:${s}`);
+      }, 1000);
+
+      return () => {
+        clearInterval(stepIv);
+        clearInterval(timeIv);
+      };
+    }, []);
+
+    const progress = Math.min(95, Math.round(((stepIndex + 1) / (steps.length + 1)) * 100));
+    const showTips = ((): boolean => {
+      const sec = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      return sec > 8;
+    })();
+
     return (
-      <div className="text-center py-12">
-        <Loading size="lg" />
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mt-6 mb-2">
-          Analisi in corso...
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          Stiamo analizzando il tuo CV con l'intelligenza artificiale.
-          Questo processo può richiedere alcuni minuti.
-        </p>
-        
-        {/* Indicatore connessione realtime */}
-        <div className="mb-6">
-          <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-            isConnected 
-              ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-          }`}>
-            <div className={`w-2 h-2 rounded-full mr-2 ${
-              isConnected ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'
-            }`}></div>
-            {isConnected ? 'Connessione realtime attiva' : 'Fallback polling attivo'}
-          </div>
-        </div>
-        
-        <div className="max-w-md mx-auto">
-          <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-4">
-            <div className="bg-primary-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
-          </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {realtimeAnalysis?.status === 'processing' 
-              ? 'Elaborazione in corso...' 
-              : 'Analizzando contenuto, struttura e compatibilità ATS...'}
-          </p>
-          
-          {realtimeError && (
-            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-              <p className="text-sm text-red-600 dark:text-red-400">
-                ⚠️ {realtimeError}
-              </p>
+      <div className="relative">
+        {/* Top banner */}
+        <div className="rounded-xl overflow-hidden shadow-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800">
+          <div className="gradient-animated bg-[linear-gradient(90deg,#3b82f6,#8b5cf6,#3b82f6)] p-4 sm:p-5">
+            <div className="flex items-center justify-between text-white">
+              <div className="flex items-center gap-3">
+                <FileText className="w-6 h-6 sm:w-7 sm:h-7" />
+                <div>
+                  <h2 className="text-lg sm:text-xl font-semibold">Analisi in corso...</h2>
+                  <p className="text-white/80 text-sm">Tempo trascorso: {elapsedLabel}</p>
+                </div>
+              </div>
+              <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white/20 backdrop-blur-sm ${
+                isConnected ? 'text-emerald-100' : 'text-yellow-100'
+              }`}>
+                <span className={`w-2 h-2 rounded-full mr-2 ${
+                  isConnected ? 'bg-emerald-300 animate-pulse' : 'bg-yellow-300'
+                }`} />
+                {isConnected ? 'Realtime attiva' : 'Polling di backup'}
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Body */}
+          <div className="p-6 sm:p-8">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+              {/* Left: Animated progress and steps */}
+              <div className="lg:col-span-3">
+                <div className="mb-6">
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div
+                      className="bg-primary-600 h-2 rounded-full transition-all duration-700 ease-out"
+                      style={{ width: `${progress}%` }}
+                      aria-valuenow={progress}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      role="progressbar"
+                    />
+                  </div>
+                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    {realtimeAnalysis?.status === 'processing'
+                      ? `Fase: ${steps[stepIndex]}`
+                      : 'Analizzando contenuto, struttura e compatibilità ATS...'}
+                  </div>
+                </div>
+
+                <ul className="space-y-3" aria-label="Fasi dell'analisi">
+                  {steps.map((label, idx) => {
+                    const active = idx === stepIndex;
+                    return (
+                      <li
+                        key={label}
+                        className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                          active
+                            ? 'border-primary-200 dark:border-primary-900/40 bg-primary-50/60 dark:bg-primary-900/10'
+                            : 'border-gray-200 dark:border-gray-700'
+                        }`}
+                        aria-current={active ? 'step' : undefined}
+                      >
+                        <span
+                          className={`w-2.5 h-2.5 rounded-full ${
+                            active ? 'bg-primary-600 animate-pulse' : 'bg-gray-300 dark:bg-gray-600'
+                          }`}
+                        />
+                        <span className={`text-sm ${active ? 'text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                          {label}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                {realtimeError && (
+                  <div className="mt-6 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                    <p className="text-sm text-red-600 dark:text-red-400">⚠️ {realtimeError}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Preview & context */}
+              <div className="lg:col-span-2">
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Dettagli file</h3>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="truncate"><span className="font-medium">Nome:</span> {fileUpload.file?.name || '—'}</p>
+                    {fileUpload.file && (
+                      <p><span className="font-medium">Dimensione:</span> {(fileUpload.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    )}
+                  </div>
+                </div>
+
+                {jobDescription && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Descrizione lavoro</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-4">{jobDescription}</p>
+                  </div>
+                )}
+                // Removed preview section
+                {showTips && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    Suggerimento: per risultati migliori, assicurati che il tuo CV sia leggibile e ben strutturato. Evita immagini di testo e privilegia PDF esportati dal tuo editor.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
