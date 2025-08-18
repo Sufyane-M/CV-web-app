@@ -9,6 +9,14 @@
     }
   },
   "rewrites": [
+    {
+      "source": "/api/stripe/create-checkout-session",
+      "destination": "/api/stripe/create-checkout-session.js"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/[...path].js"
+    },
     { "source": "/((?!api).*)", "destination": "/index.html" }
   ]
 }

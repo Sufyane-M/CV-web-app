@@ -83,7 +83,7 @@ export default async function handler(req, res) {
 
     // Verify user exists
     const { data: user, error: userError } = await supabase
-      .from('profiles')
+      .from('user_profiles')
       .select('id, email')
       .eq('id', userId)
       .single();
@@ -121,7 +121,7 @@ export default async function handler(req, res) {
 
     // Insert transaction record
     const { error: insertError } = await supabase
-      .from('transactions')
+      .from('payments')
       .insert({
         user_id: userId,
         stripe_session_id: session.id,
