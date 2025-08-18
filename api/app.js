@@ -33,6 +33,11 @@ app.use(express.urlencoded({ extended: true }));
 
 // Function to setup routes after initialization
 export function setupRoutes() {
+  // Health check endpoint
+  app.get(['/health', '/api/health'], (req, res) => {
+    res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  });
+  
   // Routes (mounted under both /api and root for flexibility)
   if (stripeRouter) {
     app.use(['/api/stripe', '/stripe'], stripeRouter);
@@ -49,7 +54,8 @@ export function setupRoutes() {
   
   // Add 404 handler after all routes are configured
   app.use('*', (req, res) => {
-    res.status(404).json({ error: 'Route not found' });
+    console.log(`404 - Route not found: ${req.method} ${req.url}`);
+    res.status(404).json({ error: 'Route not found', path: req.url, method: req.method });
   });
 }
 
@@ -65,5 +71,6 @@ app.use((err, req, res, next) => {
 });
 
 export default app;
+export { app };
 
 

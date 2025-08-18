@@ -92,7 +92,7 @@ const AttachmentManager: React.FC<AttachmentManagerProps> = ({ userId, value, on
 	}, [value]);
 
 	return (
-		<div className="relative p-6 bg-white/5 dark:bg-gray-800/30 rounded-3xl border border-gray-200/20 dark:border-gray-700/30 backdrop-blur-sm shadow-lg">
+		<div className="relative p-6 bg-white/5 dark:bg-gray-800/30 rounded-3xl border border-gray-200/20 dark:border-gray-700/30 shadow-lg">
 			<input
 				ref={inputRef}
 				type="file"
@@ -115,7 +115,7 @@ const AttachmentManager: React.FC<AttachmentManagerProps> = ({ userId, value, on
 						isDragging 
 							? 'border-blue-400 bg-gradient-to-br from-blue-500/20 via-purple-500/10 to-blue-600/20 shadow-2xl shadow-blue-500/25 scale-[1.02]' 
 							: 'border-slate-500/60 hover:border-blue-400/80 hover:bg-gradient-to-br hover:from-slate-700/40 hover:via-slate-600/20 hover:to-blue-900/20 hover:shadow-xl hover:shadow-slate-900/50'
-					} backdrop-blur-sm`}
+					}`}
 				>
 					{/* Animated background gradient */}
 					<div className={`absolute inset-0 rounded-2xl transition-opacity duration-500 ${
@@ -144,7 +144,7 @@ const AttachmentManager: React.FC<AttachmentManagerProps> = ({ userId, value, on
 							}`} />
 							{/* Glow effect */}
 							<div className={`absolute inset-0 w-16 h-16 transition-all duration-500 ${
-								isDragging ? 'bg-blue-400/20 blur-xl scale-150' : 'group-hover:bg-blue-400/10 group-hover:blur-lg group-hover:scale-125'
+								isDragging ? 'bg-blue-400/20 scale-150' : 'group-hover:bg-blue-400/10 group-hover:scale-125'
 							} rounded-full`} />
 						</div>
 						
@@ -191,7 +191,7 @@ const AttachmentManager: React.FC<AttachmentManagerProps> = ({ userId, value, on
 					</div>
 				</div>
 			) : (
-				<div className="group relative w-full p-8 border border-slate-500/40 bg-gradient-to-br from-slate-700/60 via-slate-600/40 to-slate-700/60 rounded-2xl flex items-center justify-between backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:border-slate-400/60">
+				<div className="group relative w-full p-8 border border-slate-500/40 bg-gradient-to-br from-slate-700/60 via-slate-600/40 to-slate-700/60 rounded-2xl flex items-center justify-between shadow-lg hover:shadow-xl transition-all duration-300 hover:border-slate-400/60">
 					{/* Success indicator */}
 					<div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg animate-pulse">
 						<svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,7 +201,7 @@ const AttachmentManager: React.FC<AttachmentManagerProps> = ({ userId, value, on
 
 					<div className="flex items-center gap-6">
 						<div className="relative">
-							<div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl blur-sm" />
+							<div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl" />
 							<div className="relative p-4 bg-gradient-to-br from-slate-600/80 to-slate-700/80 rounded-xl border border-slate-500/50">
 								<FileIcon />
 							</div>
@@ -245,7 +245,7 @@ const AttachmentManager: React.FC<AttachmentManagerProps> = ({ userId, value, on
 					
 					<button
 						onClick={removeFile}
-						className="group/btn relative inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-red-300 hover:text-red-200 transition-all duration-300 hover:scale-105 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-400/50 backdrop-blur-sm hover:shadow-lg hover:shadow-red-500/25"
+						className="group/btn relative inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-red-300 hover:text-red-200 transition-all duration-300 hover:scale-105 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-400/50 hover:shadow-lg hover:shadow-red-500/25"
 					>
 						<TrashIcon className="w-4 h-4 transition-transform duration-200 group-hover/btn:scale-110" />
 						<span className="font-medium">Rimuovi</span>
@@ -318,7 +318,7 @@ const FileIcon: React.FC = () => (
 		</svg>
 		
 		{/* Subtle glow effect */}
-		<div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-lg blur-sm" />
+		<div className="absolute inset-0 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-lg" />
 	</div>
 );
 
