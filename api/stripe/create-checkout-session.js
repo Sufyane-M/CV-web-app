@@ -124,12 +124,17 @@ export default async function handler(req, res) {
       .from('payments')
       .insert({
         user_id: userId,
-        stripe_session_id: session.id,
-        bundle_id: bundleId,
-        amount: bundle.price,
-        currency: bundle.currency,
-        credits: bundle.credits,
-        status: 'pending'
+        stripe_checkout_session_id: session.id,
+        stripe_payment_intent_id: `pending_${session.id}`,
+        amount: Math.round(bundle.price * 100), // Convert to cents
+        currency: bundle.currency.toLowerCase(),
+        credits_purchased: bundle.credits,
+        credits_added: bundle.credits,
+        status: 'pending',
+        metadata: {
+          bundle_id: bundleId,
+          bundle_name: bundle.name
+        }
       });
 
     if (insertError) {

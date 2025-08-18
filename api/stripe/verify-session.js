@@ -65,7 +65,7 @@ export default async function handler(req, res) {
     const { data: transaction, error: transactionError } = await supabase
       .from('payments')
       .select('*')
-      .eq('stripe_session_id', sessionId)
+      .eq('stripe_checkout_session_id', sessionId)
       .single();
 
     if (transactionError) {
@@ -85,7 +85,7 @@ export default async function handler(req, res) {
           updated_at: new Date().toISOString(),
           stripe_payment_intent_id: session.payment_intent || `completed_${session.id}`,
         })
-        .eq('stripe_session_id', sessionId);
+        .eq('stripe_checkout_session_id', sessionId);
 
       if (updateError) {
         console.error('Error updating transaction:', updateError);
