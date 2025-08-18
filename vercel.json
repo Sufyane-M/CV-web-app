@@ -6,10 +6,6 @@
     "api/**/*.js": {
       "memory": 1024,
       "maxDuration": 30
-    },
-    "api/stripe/webhook.js": {
-      "memory": 1024,
-      "maxDuration": 30
     }
   },
   "rewrites": [
