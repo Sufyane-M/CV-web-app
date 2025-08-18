@@ -5,11 +5,18 @@
   "functions": {
     "api/**/*.js": {
       "memory": 1024,
-      "maxDuration": 10
+      "maxDuration": 30
+    },
+    "api/stripe/webhook.js": {
+      "memory": 1024,
+      "maxDuration": 30
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/api/stripe/create-checkout-session", "destination": "/api/stripe/create-checkout-session" },
+    { "source": "/api/stripe/verify-session", "destination": "/api/stripe/verify-session" },
+    { "source": "/api/stripe/webhook", "destination": "/api/stripe/webhook" },
+    { "source": "/api/(.*)", "destination": "/api/[...path]" },
     { "source": "/((?!api).*)", "destination": "/index.html" }
   ]
 }
