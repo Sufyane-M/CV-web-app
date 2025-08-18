@@ -43,10 +43,10 @@ const PricingPage: React.FC = () => {
     {
       ...BUNDLES.starter,
       popular: false,
-      pricePerAnalysis: (2 * BUNDLES.starter.price) / BUNDLES.starter.credits,
+      pricePerAnalysis: BUNDLES.starter.price / BUNDLES.starter.credits,
       features: [
         'Sblocco completo della prima analisi',
-        'Fino a 2 analisi complete',
+        '3 analisi complete aggiuntive',
         'Feedback critici e warning',
         'Suggerimenti personalizzati',
         'Punteggio ATS dettagliato',
@@ -56,10 +56,10 @@ const PricingPage: React.FC = () => {
     {
       ...BUNDLES.value,
       popular: true,
-      pricePerAnalysis: (2 * BUNDLES.value.price) / BUNDLES.value.credits,
+      pricePerAnalysis: BUNDLES.value.price / BUNDLES.value.credits,
       features: [
         'Sblocco completo della prima analisi',
-        'Fino a 5 analisi complete',
+        '9 analisi complete aggiuntive',
         'Feedback critici e warning',
         'Suggerimenti personalizzati avanzati',
         'Punteggio ATS dettagliato',
@@ -189,7 +189,7 @@ const PricingPage: React.FC = () => {
   const faqs = [
     {
       question: 'Come funziona il sistema a crediti?',
-      answer: 'Ogni analisi completa richiede 2 crediti. La prima analisi è sempre gratuita ma con funzionalità limitate. Acquistando un bundle, sblocchi immediatamente i risultati completi della prima analisi e ottieni crediti per nuove analisi complete.',
+      answer: 'Ogni credito ti permette di effettuare 1 analisi completa del CV. La prima analisi è sempre gratuita ma con funzionalità limitate. Acquistando un bundle, sblocchi immediatamente i risultati completi della prima analisi e ottieni crediti aggiuntivi per nuove analisi.',
       icon: HelpCircle,
     },
     {

@@ -21,8 +21,8 @@ const EnhancedAnalysisButton: React.FC<EnhancedAnalysisButtonProps> = ({
   const disabled = !canAnalyze || isAnalyzing;
 
   return (
-    <Card className={cn('mb-6', className)}>
-      <CardContent className="p-6">
+    <Card className={cn(className)}>
+      <CardContent className="p-8">
         <div className="text-center space-y-4">
           <Button
             size="lg"

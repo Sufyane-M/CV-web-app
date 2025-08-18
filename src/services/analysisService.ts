@@ -1,4 +1,5 @@
 import { getSupabase } from './supabase';
+import { attachmentService, UploadedFileInfo } from './attachmentService';
 import { creditService } from './creditService';
 import { cacheService, CacheKeys } from './cacheService';
 import { timeoutService } from './timeoutService';
@@ -60,48 +61,29 @@ class AnalysisService {
    * Invia i dati dell'analisi al servizio di elaborazione
    */
   async submitAnalysis(request: AnalysisRequest): Promise<boolean> {
+    const formData = new FormData();
+    formData.append('file', request.file);
+    formData.append('job_description', request.job_description);
+    formData.append('analysis_id', request.analysis_id);
+    formData.append('user_id', request.user_id);
+    formData.append('file_name', request.file_name);
+    formData.append('scan_type', request.scan_type);
+
     const maxAttempts = 3;
     const baseDelayMs = 300;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        // Ricreare FormData per ogni tentativo per evitare problemi di stream esauriti
-        const formData = new FormData();
-        formData.append('file', request.file);
-        formData.append('job_description', request.job_description);
-        formData.append('analysis_id', request.analysis_id);
-        formData.append('user_id', request.user_id);
-        formData.append('file_name', request.file_name);
-        formData.append('scan_type', request.scan_type);
-
-        if (import.meta.env.DEV) {
-          console.log('[SUBMIT_DEBUG] Tentativo invio', attempt, {
-            url: this.webhookUrl,
-            fileName: request.file_name,
-            fileSize: request.file.size,
-            scanType: request.scan_type,
-            analysisId: request.analysis_id
-          });
-        }
-
         const response = await fetch(this.webhookUrl, {
           method: 'POST',
           body: formData,
-          headers: {
-            // Evitare caching intermedio su alcuni proxy/browser
-            'Cache-Control': 'no-cache',
-          },
         });
 
-        if (response.ok) {
-          if (import.meta.env.DEV) console.log('[SUBMIT_DEBUG] Invio riuscito al tentativo', attempt);
-          return true;
-        }
+        if (response.ok) return true;
 
         // Retry on transient errors
         if (response.status >= 500 || response.status === 429) {
           const wait = baseDelayMs * Math.pow(2, attempt - 1);
-          if (import.meta.env.DEV) console.warn('[SUBMIT_DEBUG] Status temporaneo', response.status, 'retry tra', wait, 'ms');
           await new Promise(res => setTimeout(res, wait));
           continue;
         }
@@ -177,6 +159,7 @@ class AnalysisService {
     cvFile: File;
     jobDescription: string;
     userId: string;
+    uploadedFile?: UploadedFileInfo | null;
   }): Promise<AnalysisResult> {
     try {
       // 1. Se esiste già un'analisi in PROCESSING per stesso utente+file, riutilizzala
@@ -226,6 +209,8 @@ class AnalysisService {
         analysis_type: eligibility.analysisType === 'free' ? 'limited' : 'complete',
         status: 'processing',
         can_upgrade: eligibility.analysisType === 'free',
+        file_path: request.uploadedFile?.filePath ?? null,
+        file_url: request.uploadedFile?.publicUrl ?? null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -451,36 +436,7 @@ class AnalysisService {
    * o usare varianti non standard. Usiamo quindi un controllo più permissivo basato anche sull'estensione.
    */
   validatePdfFile(file: File): { isValid: boolean; error?: string } {
-    // Controlla dimensione (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
-    if (file.size > maxSize) {
-      return {
-        isValid: false,
-        error: 'Il file non può superare i 10MB'
-      };
-    }
-
-    // Controlli tipo/estensione
-    const fileName = file.name.toLowerCase();
-    const isPdfByExtension = fileName.endsWith('.pdf');
-    const allowedMimeTypes = new Set([
-      'application/pdf',
-      'application/x-pdf',
-      'application/acrobat',
-      'applications/pdf',
-      'bytes',
-      'application/octet-stream'
-    ]);
-    const hasAllowedMime = file.type && allowedMimeTypes.has(file.type);
-
-    if (!isPdfByExtension && !hasAllowedMime) {
-      return {
-        isValid: false,
-        error: 'Il file deve essere in formato PDF (.pdf)'
-      };
-    }
-
-    return { isValid: true };
+    return attachmentService.validatePdfFile(file);
   }
 
   /**

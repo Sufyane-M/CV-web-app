@@ -57,7 +57,7 @@ const JobDescription: React.FC<JobDescriptionProps> = ({
     <div className={cn("group", className)}>
       <Card 
         className={cn(
-          "mb-6 transition-all duration-300 ease-in-out",
+          "transition-all duration-300 ease-in-out",
           "border-2",
           isFocused 
             ? "border-primary-400 shadow-lg shadow-primary-100 dark:shadow-primary-900/20 ring-4 ring-primary-100 dark:ring-primary-900/20" 

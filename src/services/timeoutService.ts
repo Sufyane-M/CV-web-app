@@ -195,7 +195,7 @@ class TimeoutService {
           const { error: creditError } = await supabase
             .from('user_profiles')
             .update({ 
-              credits: supabase.raw('credits + 2'),
+              credits: supabase.raw('credits + 1'),
               updated_at: new Date().toISOString()
             })
             .eq('id', analysis.user_id);
@@ -207,7 +207,7 @@ class TimeoutService {
           // Crea una transazione di rimborso
           const refundTransaction: CreditTransaction = {
             user_id: analysis.user_id,
-            amount: 2,
+            amount: 1,
             type: 'refund',
             analysis_id: analysis.id,
             description: `Rimborso per timeout analisi: ${analysis.file_name}`,

@@ -463,7 +463,7 @@ export const utils = {
   hasCredits: async (userId: string): Promise<boolean> => {
     const { data, error } = await db.profiles.get(userId);
     if (error || !data) return false;
-    return data.credits >= 2;
+    return data.credits > 0;
   },
 
   // Deduct credit and create transaction
@@ -475,14 +475,13 @@ export const utils = {
         throw new Error('Errore nel recupero del profilo utente');
       }
 
-      // Verifica disponibilità di almeno 2 crediti
-      if ((profile.credits ?? 0) < 2) {
+      if (profile.credits <= 0) {
         throw new Error('Crediti insufficienti');
       }
 
-      // Deduct 2 credits
+      // Deduct credit
       const { error: deductError } = await db.profiles.update(userId, {
-        credits: (profile.credits ?? 0) - 2,
+        credits: profile.credits - 1,
         updated_at: new Date().toISOString(),
       });
 
@@ -490,11 +489,11 @@ export const utils = {
         throw new Error('Errore nella deduzione del credito');
       }
 
-      // Create credit transaction (best-effort)
+      // Create credit transaction
       const { error: transactionError } = await db.creditTransactions.create({
         user_id: userId,
         type: 'consumption',
-        amount: -2,
+        amount: -1,
         description,
         analysis_id: analysisId,
       });

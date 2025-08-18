@@ -94,36 +94,55 @@ const PaymentSuccessPage = () => {
             <>
               <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-4" />
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                Payment Successful!
+                Pagamento Completato!
               </h1>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Thank you for your purchase. Your credits have been added to your account.
-              </p>
-              
               {paymentDetails && (
-                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
-                  <div className="text-sm text-green-800 dark:text-green-200">
-                    <p className="font-semibold">{paymentDetails.planName}</p>
-                    <p>+{paymentDetails.credits} credits added</p>
+                <>
+                  <p className="text-gray-600 dark:text-gray-400 mb-6">
+                    {paymentDetails.planName === 'Pacchetto Base' 
+                      ? 'Grazie per il tuo acquisto! Hai sbloccato 4 crediti per analisi complete del CV.'
+                      : paymentDetails.planName === 'Pacchetto Premium'
+                      ? 'Grazie per il tuo acquisto! Hai sbloccato 10 crediti per analisi complete del CV con funzionalità avanzate.'
+                      : 'Grazie per il tuo acquisto. I crediti sono stati aggiunti al tuo account.'
+                    }
+                  </p>
+                  
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
+                    <div className="text-sm text-green-800 dark:text-green-200">
+                      <p className="font-semibold">{paymentDetails.planName}</p>
+                      <p className="text-lg font-bold">
+                        +{paymentDetails.credits} crediti aggiunti
+                      </p>
+                      {paymentDetails.planName === 'Pacchetto Base' && (
+                        <p className="text-xs mt-1 opacity-80">
+                          Perfetto per iniziare con le analisi CV
+                        </p>
+                      )}
+                      {paymentDetails.planName === 'Pacchetto Premium' && (
+                        <p className="text-xs mt-1 opacity-80">
+                          Include funzionalità avanzate e supporto prioritario
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
+                </>
               )}
               
               <Button
                 onClick={handleContinue}
                 className="w-full"
               >
-                Continue to Dashboard
+                Vai alla Dashboard
               </Button>
             </>
           ) : (
             <>
               <XCircleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                Payment Failed
+                Pagamento Fallito
               </h1>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
-                There was an issue verifying your payment. Please try again or contact support.
+                Si è verificato un problema nella verifica del pagamento. Riprova o contatta il supporto.
               </p>
               
               <div className="space-y-3">
@@ -131,14 +150,14 @@ const PaymentSuccessPage = () => {
                   onClick={handleRetry}
                   className="w-full"
                 >
-                  Try Again
+                  Riprova
                 </Button>
                 <Button
                   onClick={handleContinue}
                   variant="outline"
                   className="w-full"
                 >
-                  Back to Dashboard
+                  Torna alla Dashboard
                 </Button>
               </div>
             </>
