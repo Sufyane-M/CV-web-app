@@ -50,8 +50,33 @@ export const fetchBundlesFromAPI = async () => {
 
 export type BundleId = keyof typeof BUNDLES;
 
+// Validate coupon code
+export const validateCoupon = async (couponCode: string) => {
+  try {
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+    const response = await fetch(`${apiBaseUrl}/stripe/validate-coupon`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ couponCode }),
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to validate coupon');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Coupon validation error:', error);
+    throw error;
+  }
+};
+
 // Create checkout session
-export const createCheckoutSession = async (bundleId: BundleId, userId: string) => {
+export const createCheckoutSession = async (bundleId: BundleId, userId: string, couponCode?: string) => {
   try {
     const bundle = BUNDLES[bundleId];
     if (!bundle) {
@@ -59,17 +84,24 @@ export const createCheckoutSession = async (bundleId: BundleId, userId: string) 
     }
 
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+    const requestBody: any = {
+      bundleId,
+      userId,
+      successUrl: `${window.location.origin}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${window.location.origin}/pricing`,
+    };
+
+    // Add coupon code if provided
+    if (couponCode) {
+      requestBody.couponCode = couponCode;
+    }
+
     const response = await fetch(`${apiBaseUrl}/stripe/create-checkout-session`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        bundleId,
-        userId,
-        successUrl: `${window.location.origin}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancelUrl: `${window.location.origin}/pricing`,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {

@@ -89,7 +89,7 @@ router.post('/create-checkout-session', async (req, res) => {
       return res.status(500).json({ error: 'Stripe not configured. Please set up your Stripe secret key.' });
     }
 
-    const { bundleId, userId, successUrl, cancelUrl } = req.body;
+    const { bundleId, userId, successUrl, cancelUrl, couponCode } = req.body;
 
     // Validate input
     if (!bundleId || !userId || !successUrl || !cancelUrl) {
@@ -142,8 +142,49 @@ router.post('/create-checkout-session', async (req, res) => {
       ];
     }
 
-    // Create Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
+    // Validate coupon if provided
+    let validatedCoupon = null;
+    if (couponCode) {
+      try {
+        const coupon = await stripe.coupons.retrieve(couponCode);
+        
+        // Check if coupon is valid
+        if (!coupon.valid) {
+          return res.status(400).json({ 
+            error: 'Coupon is not valid' 
+          });
+        }
+
+        // Check if coupon has expired
+        if (coupon.redeem_by && coupon.redeem_by < Math.floor(Date.now() / 1000)) {
+          return res.status(400).json({ 
+            error: 'Coupon has expired' 
+          });
+        }
+
+        // Check if coupon has reached max redemptions
+        if (coupon.max_redemptions && coupon.times_redeemed >= coupon.max_redemptions) {
+          return res.status(400).json({ 
+            error: 'Coupon has reached maximum redemptions' 
+          });
+        }
+
+        validatedCoupon = coupon;
+      } catch (error) {
+        console.error('Coupon validation error:', error);
+        if (error.type === 'StripeInvalidRequestError') {
+          return res.status(400).json({ 
+            error: 'Invalid coupon code' 
+          });
+        }
+        return res.status(500).json({ 
+          error: 'Failed to validate coupon' 
+        });
+      }
+    }
+
+    // Prepare session configuration
+    const sessionConfig = {
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
@@ -156,7 +197,18 @@ router.post('/create-checkout-session', async (req, res) => {
         credits: bundle.credits.toString(),
         planName: bundle.name,
       },
-    });
+    };
+
+    // Add coupon to session if validated
+    if (validatedCoupon) {
+      sessionConfig.discounts = [{
+        coupon: validatedCoupon.id
+      }];
+      sessionConfig.metadata.coupon_code = validatedCoupon.id;
+    }
+
+    // Create Stripe checkout session
+    const session = await stripe.checkout.sessions.create(sessionConfig);
 
     // Store pending transaction in database
     const { error: transactionError } = await supabase
@@ -185,6 +237,76 @@ router.post('/create-checkout-session', async (req, res) => {
   } catch (error) {
     console.error('Checkout session creation error:', error);
     res.status(500).json({ error: 'Failed to create checkout session' });
+  }
+});
+
+// Validate promotional code
+router.post('/validate-coupon', async (req, res) => {
+  try {
+    const { couponCode } = req.body;
+
+    if (!couponCode) {
+      return res.status(400).json({ error: 'Coupon code is required' });
+    }
+
+    // Retrieve coupon from Stripe
+    const coupon = await stripe.coupons.retrieve(couponCode);
+
+    // Check if coupon is valid
+    if (!coupon.valid) {
+      return res.status(400).json({ 
+        error: 'Coupon is not valid',
+        valid: false 
+      });
+    }
+
+    // Check if coupon has expired
+    if (coupon.redeem_by && coupon.redeem_by < Math.floor(Date.now() / 1000)) {
+      return res.status(400).json({ 
+        error: 'Coupon has expired',
+        valid: false 
+      });
+    }
+
+    // Check if coupon has reached max redemptions
+    if (coupon.max_redemptions && coupon.times_redeemed >= coupon.max_redemptions) {
+      return res.status(400).json({ 
+        error: 'Coupon has reached maximum redemptions',
+        valid: false 
+      });
+    }
+
+    // Return coupon details
+    res.json({
+      valid: true,
+      coupon: {
+        id: coupon.id,
+        name: coupon.name,
+        percent_off: coupon.percent_off,
+        amount_off: coupon.amount_off,
+        currency: coupon.currency,
+        duration: coupon.duration,
+        duration_in_months: coupon.duration_in_months,
+        max_redemptions: coupon.max_redemptions,
+        times_redeemed: coupon.times_redeemed,
+        redeem_by: coupon.redeem_by
+      }
+    });
+  } catch (error) {
+    console.error('Coupon validation error:', error);
+    
+    // Handle specific Stripe errors
+    if (error.type === 'StripeInvalidRequestError') {
+      return res.status(400).json({ 
+        error: 'Invalid coupon code',
+        valid: false 
+      });
+    }
+    
+    res.status(500).json({ 
+      error: 'Failed to validate coupon',
+      valid: false 
+    });
   }
 });
 
