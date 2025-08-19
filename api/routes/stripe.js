@@ -24,7 +24,7 @@ const BUNDLES = {
     price: 4.99,
     credits: 4,
     currency: 'EUR',
-    description: 'Ideale per chi vuole testare il nostro servizio', // Fallback description
+    description: 'Ideale per chi vuole testare il nostro servizio',
     // Price ID dinamico basato sull'ambiente (test/live)
     stripePriceId: process.env.STRIPE_PRICE_ID_STARTER || null
   },
@@ -34,52 +34,11 @@ const BUNDLES = {
     price: 9.99,
     credits: 10,
     currency: 'EUR',
-    description: 'La scelta migliore per chi cerca il massimo valore', // Fallback description
+    description: 'La scelta migliore per chi cerca il massimo valore',
     // Price ID dinamico basato sull'ambiente (test/live)
     stripePriceId: process.env.STRIPE_PRICE_ID_VALUE || null
   }
 };
-
-// Function to get product description from Stripe
-async function getProductDescriptionFromStripe(priceId) {
-  try {
-    if (!priceId) {
-      return null;
-    }
-    
-    // Get price details from Stripe
-    const price = await stripe.prices.retrieve(priceId);
-    
-    if (!price || !price.product) {
-      return null;
-    }
-    
-    // Get product details from Stripe
-    const product = await stripe.products.retrieve(price.product);
-    
-    return product.description || null;
-  } catch (error) {
-    console.error('Error fetching product description from Stripe:', error);
-    return null;
-  }
-}
-
-// Function to get enhanced bundle with Stripe description
-async function getEnhancedBundle(bundleId) {
-  const bundle = BUNDLES[bundleId];
-  if (!bundle) {
-    return null;
-  }
-  
-  // Try to get description from Stripe
-  const stripeDescription = await getProductDescriptionFromStripe(bundle.stripePriceId);
-  
-  // Return bundle with Stripe description if available, otherwise use fallback
-  return {
-    ...bundle,
-    description: stripeDescription || bundle.description
-  };
-}
 
 // Create checkout session
 router.post('/create-checkout-session', async (req, res) => {
@@ -89,14 +48,14 @@ router.post('/create-checkout-session', async (req, res) => {
       return res.status(500).json({ error: 'Stripe not configured. Please set up your Stripe secret key.' });
     }
 
-    const { bundleId, userId, successUrl, cancelUrl, couponCode } = req.body;
+    const { bundleId, userId, successUrl, cancelUrl } = req.body;
 
     // Validate input
     if (!bundleId || !userId || !successUrl || !cancelUrl) {
       return res.status(400).json({ error: 'Missing required parameters' });
     }
 
-    const bundle = await getEnhancedBundle(bundleId);
+    const bundle = BUNDLES[bundleId];
     if (!bundle) {
       return res.status(400).json({ error: 'Invalid bundle ID' });
     }
@@ -142,49 +101,8 @@ router.post('/create-checkout-session', async (req, res) => {
       ];
     }
 
-    // Validate coupon if provided
-    let validatedCoupon = null;
-    if (couponCode) {
-      try {
-        const coupon = await stripe.coupons.retrieve(couponCode);
-        
-        // Check if coupon is valid
-        if (!coupon.valid) {
-          return res.status(400).json({ 
-            error: 'Coupon is not valid' 
-          });
-        }
-
-        // Check if coupon has expired
-        if (coupon.redeem_by && coupon.redeem_by < Math.floor(Date.now() / 1000)) {
-          return res.status(400).json({ 
-            error: 'Coupon has expired' 
-          });
-        }
-
-        // Check if coupon has reached max redemptions
-        if (coupon.max_redemptions && coupon.times_redeemed >= coupon.max_redemptions) {
-          return res.status(400).json({ 
-            error: 'Coupon has reached maximum redemptions' 
-          });
-        }
-
-        validatedCoupon = coupon;
-      } catch (error) {
-        console.error('Coupon validation error:', error);
-        if (error.type === 'StripeInvalidRequestError') {
-          return res.status(400).json({ 
-            error: 'Invalid coupon code' 
-          });
-        }
-        return res.status(500).json({ 
-          error: 'Failed to validate coupon' 
-        });
-      }
-    }
-
-    // Prepare session configuration
-    const sessionConfig = {
+    // Create Stripe checkout session
+    const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
@@ -197,18 +115,7 @@ router.post('/create-checkout-session', async (req, res) => {
         credits: bundle.credits.toString(),
         planName: bundle.name,
       },
-    };
-
-    // Add coupon to session if validated
-    if (validatedCoupon) {
-      sessionConfig.discounts = [{
-        coupon: validatedCoupon.id
-      }];
-      sessionConfig.metadata.coupon_code = validatedCoupon.id;
-    }
-
-    // Create Stripe checkout session
-    const session = await stripe.checkout.sessions.create(sessionConfig);
+    });
 
     // Store pending transaction in database
     const { error: transactionError } = await supabase
@@ -237,76 +144,6 @@ router.post('/create-checkout-session', async (req, res) => {
   } catch (error) {
     console.error('Checkout session creation error:', error);
     res.status(500).json({ error: 'Failed to create checkout session' });
-  }
-});
-
-// Validate promotional code
-router.post('/validate-coupon', async (req, res) => {
-  try {
-    const { couponCode } = req.body;
-
-    if (!couponCode) {
-      return res.status(400).json({ error: 'Coupon code is required' });
-    }
-
-    // Retrieve coupon from Stripe
-    const coupon = await stripe.coupons.retrieve(couponCode);
-
-    // Check if coupon is valid
-    if (!coupon.valid) {
-      return res.status(400).json({ 
-        error: 'Coupon is not valid',
-        valid: false 
-      });
-    }
-
-    // Check if coupon has expired
-    if (coupon.redeem_by && coupon.redeem_by < Math.floor(Date.now() / 1000)) {
-      return res.status(400).json({ 
-        error: 'Coupon has expired',
-        valid: false 
-      });
-    }
-
-    // Check if coupon has reached max redemptions
-    if (coupon.max_redemptions && coupon.times_redeemed >= coupon.max_redemptions) {
-      return res.status(400).json({ 
-        error: 'Coupon has reached maximum redemptions',
-        valid: false 
-      });
-    }
-
-    // Return coupon details
-    res.json({
-      valid: true,
-      coupon: {
-        id: coupon.id,
-        name: coupon.name,
-        percent_off: coupon.percent_off,
-        amount_off: coupon.amount_off,
-        currency: coupon.currency,
-        duration: coupon.duration,
-        duration_in_months: coupon.duration_in_months,
-        max_redemptions: coupon.max_redemptions,
-        times_redeemed: coupon.times_redeemed,
-        redeem_by: coupon.redeem_by
-      }
-    });
-  } catch (error) {
-    console.error('Coupon validation error:', error);
-    
-    // Handle specific Stripe errors
-    if (error.type === 'StripeInvalidRequestError') {
-      return res.status(400).json({ 
-        error: 'Invalid coupon code',
-        valid: false 
-      });
-    }
-    
-    res.status(500).json({ 
-      error: 'Failed to validate coupon',
-      valid: false 
-    });
   }
 });
 
@@ -468,29 +305,6 @@ async function handleCheckoutSessionCompleted(session) {
     console.error('Error handling checkout session completed:', error);
   }
 }
-
-});
-
-// Get bundles with dynamic descriptions from Stripe
-router.get('/bundles', async (req, res) => {
-  try {
-    const bundleIds = Object.keys(BUNDLES);
-    const enhancedBundles = {};
-    
-    // Get enhanced bundles with Stripe descriptions
-    for (const bundleId of bundleIds) {
-      const enhancedBundle = await getEnhancedBundle(bundleId);
-      if (enhancedBundle) {
-        enhancedBundles[bundleId] = enhancedBundle;
-      }
-    }
-    
-    res.json(enhancedBundles);
-  } catch (error) {
-    console.error('Error fetching bundles:', error);
-    res.status(500).json({ error: 'Failed to fetch bundles' });
-  }
-});
 
 // Handle successful payment intent
 async function handlePaymentIntentSucceeded(paymentIntent) {

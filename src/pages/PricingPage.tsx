@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Check,
@@ -17,7 +17,7 @@ import { useNotification } from '../hooks/useNotificationMigration';
 import Button from '../components/ui/Button';
 import Card, { CardHeader, CardContent, CardFooter } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
-import { createCheckoutSession, BUNDLES, fetchBundlesFromAPI, formatPrice, validateCoupon, type BundleId } from '../services/stripe';
+import { redirectToPaymentLink, BUNDLES, formatPrice, type BundleId } from '../services/stripe';
 // import PaymentDebugPanel from '../components/PaymentDebugPanel'; // Temporarily disabled
 
 interface Bundle {
@@ -37,40 +37,13 @@ const PricingPage: React.FC = () => {
   const { showError, showSuccess } = useNotification();
   
   const [loading, setLoading] = useState<string | null>(null);
-  const [dynamicBundles, setDynamicBundles] = useState(BUNDLES);
-  const [bundlesLoading, setBundlesLoading] = useState(true);
-  const [couponCode, setCouponCode] = useState('');
-  const [couponValidation, setCouponValidation] = useState<{
-    isValid: boolean;
-    coupon?: any;
-    error?: string;
-    isValidating?: boolean;
-  }>({ isValid: false });
   
-  // Load bundles with dynamic descriptions from Stripe
-  useEffect(() => {
-    const loadBundles = async () => {
-      try {
-        setBundlesLoading(true);
-        const bundles = await fetchBundlesFromAPI();
-        setDynamicBundles(bundles);
-      } catch (error) {
-        console.error('Error loading bundles:', error);
-        // Keep static bundles as fallback
-      } finally {
-        setBundlesLoading(false);
-      }
-    };
-    
-    loadBundles();
-  }, []);
-  
-  // Define bundle packages with extended features using dynamic bundles
+  // Define bundle packages with extended features
   const bundles: Bundle[] = [
     {
-      ...dynamicBundles.starter,
+      ...BUNDLES.starter,
       popular: false,
-      pricePerAnalysis: dynamicBundles.starter.price / dynamicBundles.starter.credits,
+      pricePerAnalysis: BUNDLES.starter.price / BUNDLES.starter.credits,
       features: [
         'Sblocco completo della prima analisi',
         '3 analisi complete aggiuntive',
@@ -81,9 +54,9 @@ const PricingPage: React.FC = () => {
       ],
     },
     {
-      ...dynamicBundles.value,
+      ...BUNDLES.value,
       popular: true,
-      pricePerAnalysis: dynamicBundles.value.price / dynamicBundles.value.credits,
+      pricePerAnalysis: BUNDLES.value.price / BUNDLES.value.credits,
       features: [
         'Sblocco completo della prima analisi',
         '9 analisi complete aggiuntive',
@@ -97,53 +70,6 @@ const PricingPage: React.FC = () => {
     },
   ];
   
-  // Show loading state while bundles are being fetched
-  if (bundlesLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Caricamento piani...</p>
-        </div>
-      </div>
-    );
-  }
-  
-  // Validate coupon code
-  const handleValidateCoupon = async (code: string) => {
-    if (!code.trim()) {
-      setCouponValidation({ isValid: false });
-      return;
-    }
-
-    setCouponValidation({ isValid: false, isValidating: true });
-    
-    try {
-      const result = await validateCoupon(code.trim());
-      setCouponValidation({
-        isValid: true,
-        coupon: result.coupon,
-        isValidating: false
-      });
-      showSuccess('Codice promozionale valido!');
-    } catch (error: any) {
-      setCouponValidation({
-        isValid: false,
-        error: error.message,
-        isValidating: false
-      });
-      showError(error.message || 'Codice promozionale non valido');
-    }
-  };
-
-  // Handle coupon code change
-  const handleCouponChange = (value: string) => {
-    setCouponCode(value);
-    if (!value.trim()) {
-      setCouponValidation({ isValid: false });
-    }
-  };
-
   // Handle bundle purchase
   const handlePurchaseBundle = async (bundleId: BundleId) => {
     if (!isAuthenticated) {
@@ -154,14 +80,13 @@ const PricingPage: React.FC = () => {
     
     setLoading(bundleId);
     try {
-      const validCoupon = couponValidation.isValid ? couponCode.trim() : undefined;
-      await createCheckoutSession(bundleId, user!.id, validCoupon);
+      // Redirect directly to Stripe payment link
+      redirectToPaymentLink(bundleId);
     } catch (error: any) {
-      console.error('Checkout error:', error);
+      console.error('Payment redirect error:', error);
       showError(
         error instanceof Error ? error.message : 'Errore durante l\'avvio del pagamento'
       );
-    } finally {
       setLoading(null);
     }
   };
@@ -304,74 +229,6 @@ const PricingPage: React.FC = () => {
           <p className="mt-6 text-xl text-gray-600 dark:text-gray-400">
             Dai una svolta alla tua ricerca di lavoro. I nostri piani ti offrono gli strumenti per creare un CV che non passa inosservato,
           </p>
-        </div>
-
-        {/* Sezione Codice Promozionale */}
-        <div className="mt-12 mx-auto max-w-md">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-            <div className="text-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Hai un codice promozionale?
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Inserisci il tuo codice per ottenere uno sconto
-              </p>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={couponCode}
-                  onChange={(e) => handleCouponChange(e.target.value)}
-                  placeholder="Inserisci codice promozionale"
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                  disabled={couponValidation.isValidating}
-                />
-                {couponValidation.isValidating && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
-                  </div>
-                )}
-              </div>
-              
-              <button
-                onClick={() => handleValidateCoupon(couponCode)}
-                disabled={!couponCode.trim() || couponValidation.isValidating}
-                className="w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors duration-200"
-              >
-                {couponValidation.isValidating ? 'Validazione...' : 'Applica Codice'}
-              </button>
-              
-              {/* Coupon Status */}
-              {couponValidation.isValid && couponValidation.coupon && (
-                <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg">
-                  <div className="flex items-center text-green-800 dark:text-green-400">
-                    <Check className="h-4 w-4 mr-2" />
-                    <span className="text-sm font-medium">
-                      Codice valido! 
-                      {couponValidation.coupon.percent_off && (
-                        <span className="ml-1">Sconto: {couponValidation.coupon.percent_off}%</span>
-                      )}
-                      {couponValidation.coupon.amount_off && (
-                        <span className="ml-1">
-                          Sconto: {(couponValidation.coupon.amount_off / 100).toFixed(2)} {couponValidation.coupon.currency?.toUpperCase()}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                </div>
-              )}
-              
-              {couponValidation.error && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg">
-                  <div className="flex items-center text-red-800 dark:text-red-400">
-                    <span className="text-sm">{couponValidation.error}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
 
         <div className="mt-16 grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-12">

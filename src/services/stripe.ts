@@ -9,7 +9,7 @@ const getStripe = () => {
   return stripePromise;
 };
 
-// Bundle configurations (fallback/static)
+// Bundle configurations
 export const BUNDLES = {
   starter: {
     id: 'starter',
@@ -17,7 +17,8 @@ export const BUNDLES = {
     price: 4.99,
     credits: 4,
     currency: 'EUR',
-    description: 'Ideale per chi vuole testare il nostro servizio'
+    description: 'Ideale per chi vuole testare il nostro servizio',
+    paymentLink: 'https://buy.stripe.com/aFabJ0cEc1un5E8aZY0Ba06'
   },
   value: {
     id: 'value',
@@ -25,58 +26,26 @@ export const BUNDLES = {
     price: 9.99,
     credits: 10,
     currency: 'EUR',
-    description: 'La scelta migliore per chi cerca il massimo valore'
+    description: 'La scelta migliore per chi cerca il massimo valore',
+    paymentLink: 'https://buy.stripe.com/00wbJ00Vu0qj4A45FE0Ba05'
   }
 } as const;
 
-// Function to fetch bundles with dynamic descriptions from Stripe
-export const fetchBundlesFromAPI = async () => {
-  try {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
-    const response = await fetch(`${apiBaseUrl}/stripe/bundles`);
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch bundles from API');
-    }
-    
-    const bundles = await response.json();
-    return bundles;
-  } catch (error) {
-    console.error('Error fetching bundles from API:', error);
-    // Return static bundles as fallback
-    return BUNDLES;
-  }
-};
-
 export type BundleId = keyof typeof BUNDLES;
 
-// Validate coupon code
-export const validateCoupon = async (couponCode: string) => {
-  try {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
-    const response = await fetch(`${apiBaseUrl}/stripe/validate-coupon`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ couponCode }),
-    });
-
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.error || 'Failed to validate coupon');
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Coupon validation error:', error);
-    throw error;
+// Direct payment redirect using Stripe payment links
+export const redirectToPaymentLink = (bundleId: BundleId) => {
+  const bundle = BUNDLES[bundleId];
+  if (!bundle || !bundle.paymentLink) {
+    throw new Error('Invalid bundle or payment link not available');
   }
+  
+  // Redirect to the Stripe payment link
+  window.location.href = bundle.paymentLink;
 };
 
-// Create checkout session
-export const createCheckoutSession = async (bundleId: BundleId, userId: string, couponCode?: string) => {
+// Create checkout session (legacy method - kept for backward compatibility)
+export const createCheckoutSession = async (bundleId: BundleId, userId: string) => {
   try {
     const bundle = BUNDLES[bundleId];
     if (!bundle) {
@@ -84,24 +53,17 @@ export const createCheckoutSession = async (bundleId: BundleId, userId: string, 
     }
 
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
-    const requestBody: any = {
-      bundleId,
-      userId,
-      successUrl: `${window.location.origin}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${window.location.origin}/pricing`,
-    };
-
-    // Add coupon code if provided
-    if (couponCode) {
-      requestBody.couponCode = couponCode;
-    }
-
     const response = await fetch(`${apiBaseUrl}/stripe/create-checkout-session`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({
+        bundleId,
+        userId,
+        successUrl: `${window.location.origin}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${window.location.origin}/pricing`,
+      }),
     });
 
     if (!response.ok) {
