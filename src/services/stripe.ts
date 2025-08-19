@@ -9,7 +9,7 @@ const getStripe = () => {
   return stripePromise;
 };
 
-// Bundle configurations
+// Bundle configurations (fallback/static)
 export const BUNDLES = {
   starter: {
     id: 'starter',
@@ -28,6 +28,25 @@ export const BUNDLES = {
     description: 'La scelta migliore per chi cerca il massimo valore'
   }
 } as const;
+
+// Function to fetch bundles with dynamic descriptions from Stripe
+export const fetchBundlesFromAPI = async () => {
+  try {
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+    const response = await fetch(`${apiBaseUrl}/stripe/bundles`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch bundles from API');
+    }
+    
+    const bundles = await response.json();
+    return bundles;
+  } catch (error) {
+    console.error('Error fetching bundles from API:', error);
+    // Return static bundles as fallback
+    return BUNDLES;
+  }
+};
 
 export type BundleId = keyof typeof BUNDLES;
 

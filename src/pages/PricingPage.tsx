@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Check,
@@ -17,7 +17,7 @@ import { useNotification } from '../hooks/useNotificationMigration';
 import Button from '../components/ui/Button';
 import Card, { CardHeader, CardContent, CardFooter } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
-import { createCheckoutSession, BUNDLES, formatPrice, type BundleId } from '../services/stripe';
+import { createCheckoutSession, BUNDLES, fetchBundlesFromAPI, formatPrice, type BundleId } from '../services/stripe';
 // import PaymentDebugPanel from '../components/PaymentDebugPanel'; // Temporarily disabled
 
 interface Bundle {
@@ -37,13 +37,33 @@ const PricingPage: React.FC = () => {
   const { showError, showSuccess } = useNotification();
   
   const [loading, setLoading] = useState<string | null>(null);
+  const [dynamicBundles, setDynamicBundles] = useState(BUNDLES);
+  const [bundlesLoading, setBundlesLoading] = useState(true);
   
-  // Define bundle packages with extended features
+  // Load bundles with dynamic descriptions from Stripe
+  useEffect(() => {
+    const loadBundles = async () => {
+      try {
+        setBundlesLoading(true);
+        const bundles = await fetchBundlesFromAPI();
+        setDynamicBundles(bundles);
+      } catch (error) {
+        console.error('Error loading bundles:', error);
+        // Keep static bundles as fallback
+      } finally {
+        setBundlesLoading(false);
+      }
+    };
+    
+    loadBundles();
+  }, []);
+  
+  // Define bundle packages with extended features using dynamic bundles
   const bundles: Bundle[] = [
     {
-      ...BUNDLES.starter,
+      ...dynamicBundles.starter,
       popular: false,
-      pricePerAnalysis: BUNDLES.starter.price / BUNDLES.starter.credits,
+      pricePerAnalysis: dynamicBundles.starter.price / dynamicBundles.starter.credits,
       features: [
         'Sblocco completo della prima analisi',
         '3 analisi complete aggiuntive',
@@ -54,9 +74,9 @@ const PricingPage: React.FC = () => {
       ],
     },
     {
-      ...BUNDLES.value,
+      ...dynamicBundles.value,
       popular: true,
-      pricePerAnalysis: BUNDLES.value.price / BUNDLES.value.credits,
+      pricePerAnalysis: dynamicBundles.value.price / dynamicBundles.value.credits,
       features: [
         'Sblocco completo della prima analisi',
         '9 analisi complete aggiuntive',
@@ -69,6 +89,18 @@ const PricingPage: React.FC = () => {
       ],
     },
   ];
+  
+  // Show loading state while bundles are being fetched
+  if (bundlesLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Caricamento piani...</p>
+        </div>
+      </div>
+    );
+  }
   
   // Handle bundle purchase
   const handlePurchaseBundle = async (bundleId: BundleId) => {

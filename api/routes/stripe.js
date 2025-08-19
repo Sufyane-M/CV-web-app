@@ -24,7 +24,7 @@ const BUNDLES = {
     price: 4.99,
     credits: 4,
     currency: 'EUR',
-    description: 'Ideale per chi vuole testare il nostro servizio',
+    description: 'Ideale per chi vuole testare il nostro servizio', // Fallback description
     // Price ID dinamico basato sull'ambiente (test/live)
     stripePriceId: process.env.STRIPE_PRICE_ID_STARTER || null
   },
@@ -34,11 +34,52 @@ const BUNDLES = {
     price: 9.99,
     credits: 10,
     currency: 'EUR',
-    description: 'La scelta migliore per chi cerca il massimo valore',
+    description: 'La scelta migliore per chi cerca il massimo valore', // Fallback description
     // Price ID dinamico basato sull'ambiente (test/live)
     stripePriceId: process.env.STRIPE_PRICE_ID_VALUE || null
   }
 };
+
+// Function to get product description from Stripe
+async function getProductDescriptionFromStripe(priceId) {
+  try {
+    if (!priceId) {
+      return null;
+    }
+    
+    // Get price details from Stripe
+    const price = await stripe.prices.retrieve(priceId);
+    
+    if (!price || !price.product) {
+      return null;
+    }
+    
+    // Get product details from Stripe
+    const product = await stripe.products.retrieve(price.product);
+    
+    return product.description || null;
+  } catch (error) {
+    console.error('Error fetching product description from Stripe:', error);
+    return null;
+  }
+}
+
+// Function to get enhanced bundle with Stripe description
+async function getEnhancedBundle(bundleId) {
+  const bundle = BUNDLES[bundleId];
+  if (!bundle) {
+    return null;
+  }
+  
+  // Try to get description from Stripe
+  const stripeDescription = await getProductDescriptionFromStripe(bundle.stripePriceId);
+  
+  // Return bundle with Stripe description if available, otherwise use fallback
+  return {
+    ...bundle,
+    description: stripeDescription || bundle.description
+  };
+}
 
 // Create checkout session
 router.post('/create-checkout-session', async (req, res) => {
@@ -55,7 +96,7 @@ router.post('/create-checkout-session', async (req, res) => {
       return res.status(400).json({ error: 'Missing required parameters' });
     }
 
-    const bundle = BUNDLES[bundleId];
+    const bundle = await getEnhancedBundle(bundleId);
     if (!bundle) {
       return res.status(400).json({ error: 'Invalid bundle ID' });
     }
@@ -305,6 +346,29 @@ async function handleCheckoutSessionCompleted(session) {
     console.error('Error handling checkout session completed:', error);
   }
 }
+
+});
+
+// Get bundles with dynamic descriptions from Stripe
+router.get('/bundles', async (req, res) => {
+  try {
+    const bundleIds = Object.keys(BUNDLES);
+    const enhancedBundles = {};
+    
+    // Get enhanced bundles with Stripe descriptions
+    for (const bundleId of bundleIds) {
+      const enhancedBundle = await getEnhancedBundle(bundleId);
+      if (enhancedBundle) {
+        enhancedBundles[bundleId] = enhancedBundle;
+      }
+    }
+    
+    res.json(enhancedBundles);
+  } catch (error) {
+    console.error('Error fetching bundles:', error);
+    res.status(500).json({ error: 'Failed to fetch bundles' });
+  }
+});
 
 // Handle successful payment intent
 async function handlePaymentIntentSucceeded(paymentIntent) {
