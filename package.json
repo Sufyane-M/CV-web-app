@@ -17,7 +17,11 @@
     "test:perf": "npm run perf:check",
     "check": "npm run build && npm run perf:budget",
     "monitor:start": "npm run dev & npm run perf:monitor",
-    "ci:perf": "npm run build:optimized && npm run lighthouse:ci && npm run perf:budget"
+    "ci:perf": "npm run build:optimized && npm run lighthouse:ci && npm run perf:budget",
+    "deploy:production": "node scripts/deploy-production.js production",
+    "deploy:test": "node scripts/deploy-production.js test",
+    "stripe:production": "npm run deploy:production",
+    "stripe:test": "npm run deploy:test"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

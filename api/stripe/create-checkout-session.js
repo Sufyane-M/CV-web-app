@@ -11,11 +11,26 @@ const __dirname = path.dirname(__filename);
 // Configure dotenv to load from the api directory
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-// Initialize Stripe
+// Environment configuration
+const isProduction = process.env.NODE_ENV === 'production';
+const stripeMode = isProduction ? 'LIVE' : 'TEST';
+
+// Initialize Stripe with environment validation
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('STRIPE_SECRET_KEY environment variable is required');
 }
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Validate Stripe key format based on environment
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+if (isProduction && !stripeKey.startsWith('sk_live_')) {
+  throw new Error('Production environment requires LIVE Stripe secret key (sk_live_...)');
+}
+if (!isProduction && !stripeKey.startsWith('sk_test_')) {
+  console.warn('⚠️  Development environment should use TEST Stripe key (sk_test_...)');
+}
+
+const stripe = new Stripe(stripeKey);
+console.log(`🔧 Stripe initialized in ${stripeMode} mode`);
 
 // Initialize Supabase
 const supabase = createClient(
