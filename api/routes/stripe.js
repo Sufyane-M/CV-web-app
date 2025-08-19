@@ -25,6 +25,7 @@ const BUNDLES = {
     credits: 4,
     currency: 'EUR',
     description: 'Ideale per chi vuole testare il nostro servizio',
+    paymentLink: 'https://buy.stripe.com/aFabJ0cEc1un5E8aZY0Ba06',
     // Price ID dinamico basato sull'ambiente (test/live)
     stripePriceId: process.env.STRIPE_PRICE_ID_STARTER || null
   },
@@ -35,6 +36,7 @@ const BUNDLES = {
     credits: 10,
     currency: 'EUR',
     description: 'La scelta migliore per chi cerca il massimo valore',
+    paymentLink: 'https://buy.stripe.com/00wbJ00Vu0qj4A45FE0Ba05',
     // Price ID dinamico basato sull'ambiente (test/live)
     stripePriceId: process.env.STRIPE_PRICE_ID_VALUE || null
   }

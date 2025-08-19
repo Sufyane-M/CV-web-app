@@ -17,7 +17,7 @@ import { useNotification } from '../hooks/useNotificationMigration';
 import Button from '../components/ui/Button';
 import Card, { CardHeader, CardContent, CardFooter } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
-import { redirectToPaymentLink, BUNDLES, formatPrice, type BundleId } from '../services/stripe';
+import { createCheckoutSession, BUNDLES, formatPrice, type BundleId } from '../services/stripe';
 // import PaymentDebugPanel from '../components/PaymentDebugPanel'; // Temporarily disabled
 
 interface Bundle {
@@ -80,13 +80,13 @@ const PricingPage: React.FC = () => {
     
     setLoading(bundleId);
     try {
-      // Redirect directly to Stripe payment link
-      redirectToPaymentLink(bundleId);
+      await createCheckoutSession(bundleId, user!.id);
     } catch (error: any) {
-      console.error('Payment redirect error:', error);
+      console.error('Checkout error:', error);
       showError(
         error instanceof Error ? error.message : 'Errore durante l\'avvio del pagamento'
       );
+    } finally {
       setLoading(null);
     }
   };
