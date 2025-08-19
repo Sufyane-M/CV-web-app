@@ -3,26 +3,11 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 const router = express.Router();
 
-// Environment configuration
-const isProduction = process.env.NODE_ENV === 'production';
-const stripeMode = isProduction ? 'LIVE' : 'TEST';
-
-// Initialize Stripe with environment validation
+// Initialize Stripe
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('STRIPE_SECRET_KEY environment variable is required');
 }
-
-// Validate Stripe key format based on environment
-const stripeKey = process.env.STRIPE_SECRET_KEY;
-if (isProduction && !stripeKey.startsWith('sk_live_')) {
-  throw new Error('Production environment requires LIVE Stripe secret key (sk_live_...)');
-}
-if (!isProduction && !stripeKey.startsWith('sk_test_')) {
-  console.warn('⚠️  Development environment should use TEST Stripe key (sk_test_...)');
-}
-
-const stripe = new Stripe(stripeKey);
-console.log(`🔧 Stripe initialized in ${stripeMode} mode`);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Initialize Supabase
 const supabase = createClient(
@@ -53,19 +38,10 @@ const BUNDLES = {
 // Create checkout session
 router.post('/create-checkout-session', async (req, res) => {
   try {
-    // Check if Stripe is properly configured for current environment
+    // Check if Stripe is properly configured
     if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY.includes('your_stripe_secret_key_here')) {
       return res.status(500).json({ error: 'Stripe not configured. Please set up your Stripe secret key.' });
     }
-
-    // Additional validation for production environment
-    if (isProduction && stripeKey.startsWith('sk_test_')) {
-      return res.status(500).json({ 
-        error: 'Production environment detected but using TEST Stripe keys. Please configure LIVE keys.' 
-      });
-    }
-
-    console.log(`💳 Creating checkout session in ${stripeMode} mode for bundle: ${req.body.bundleId}`);
 
     const { bundleId, userId, successUrl, cancelUrl } = req.body;
 

@@ -94,51 +94,16 @@ cp .env.example .env
 Modifica il file `.env` con le tue configurazioni:
 
 ```env
-# Modalità Ambiente
-NODE_ENV=development
-
 # Supabase
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-# Stripe (Modalità Test)
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_test_key
-STRIPE_SECRET_KEY=sk_test_your_test_key
-STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
-
-# Product Price IDs (Test)
-VITE_STRIPE_PRICE_BASIC=price_test_basic
-VITE_STRIPE_PRICE_PREMIUM=price_test_premium
-VITE_STRIPE_PRICE_ENTERPRISE=price_test_enterprise
+# Stripe
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
 
 # API
 VITE_API_BASE_URL=/api
 ```
-
-### 4. Deploy in Produzione - Stripe
-
-Per passare dalla modalità test alla produzione con pagamenti reali:
-
-#### Setup Rapido
-```bash
-# 1. Configura le chiavi live nel file .env.production
-# 2. Deploy automatico in produzione
-npm run stripe:production
-
-# Per tornare alla modalità test
-npm run stripe:test
-```
-
-#### Documentazione Completa
-Per istruzioni dettagliate sul deploy in produzione, consulta:
-📖 **[DEPLOY_PRODUCTION.md](./DEPLOY_PRODUCTION.md)**
-
-La guida include:
-- ✅ Configurazione chiavi API Stripe live
-- ✅ Setup prodotti e webhook
-- ✅ Script di deploy automatico
-- ✅ Checklist pre-deploy
-- ✅ Troubleshooting e monitoraggio
 
 ### 4. Setup Supabase
 
