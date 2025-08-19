@@ -44,7 +44,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 # Stripe
 STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
-STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+STRIPE_WEBHOOK_SECRET=whsec_[your_webhook_secret]
 
 # Altri
 NODE_ENV=production

@@ -16,6 +16,7 @@ const supabase = createClient(
 );
 
 // Bundle configurations (must match frontend)
+// Supporta sia modalità test che produzione tramite variabili d'ambiente
 const BUNDLES = {
   starter: {
     id: 'starter',
@@ -23,7 +24,9 @@ const BUNDLES = {
     price: 4.99,
     credits: 4,
     currency: 'EUR',
-    description: 'Ideale per chi vuole testare il nostro servizio'
+    description: 'Ideale per chi vuole testare il nostro servizio',
+    // Price ID dinamico basato sull'ambiente (test/live)
+    stripePriceId: process.env.STRIPE_PRICE_ID_STARTER || null
   },
   value: {
     id: 'value',
@@ -31,7 +34,9 @@ const BUNDLES = {
     price: 9.99,
     credits: 10,
     currency: 'EUR',
-    description: 'La scelta migliore per chi cerca il massimo valore'
+    description: 'La scelta migliore per chi cerca il massimo valore',
+    // Price ID dinamico basato sull'ambiente (test/live)
+    stripePriceId: process.env.STRIPE_PRICE_ID_VALUE || null
   }
 };
 
@@ -66,10 +71,22 @@ router.post('/create-checkout-session', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Create Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
+    // Determina se usare Price ID predefinito o creare prezzo dinamicamente
+    let lineItems;
+    
+    if (bundle.stripePriceId) {
+      // Modalità produzione: usa Price ID predefinito di Stripe
+      console.log(`Using Stripe Price ID: ${bundle.stripePriceId} for bundle: ${bundleId}`);
+      lineItems = [
+        {
+          price: bundle.stripePriceId,
+          quantity: 1,
+        },
+      ];
+    } else {
+      // Modalità sviluppo: crea prezzo dinamicamente
+      console.log(`Creating dynamic price for bundle: ${bundleId}`);
+      lineItems = [
         {
           price_data: {
             currency: bundle.currency.toLowerCase(),
@@ -81,7 +98,13 @@ router.post('/create-checkout-session', async (req, res) => {
           },
           quantity: 1,
         },
-      ],
+      ];
+    }
+
+    // Create Stripe checkout session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: lineItems,
       mode: 'payment',
       success_url: successUrl,
       cancel_url: cancelUrl,

@@ -260,8 +260,8 @@ STRIPE_SECRET_KEY=sk_test_...
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
 
 # 🚀 MODALITÀ LIVE (produzione)
-STRIPE_SECRET_KEY=sk_live_...
-VITE_STRIPE_PUBLISHABLE_KEY=pk_live_...
+STRIPE_SECRET_KEY=sk_live_[...]
+VITE_STRIPE_PUBLISHABLE_KEY=pk_live_[...]
 ```
 
 ## 🔧 Note Importanti
@@ -300,7 +300,7 @@ Per gestire eventi post-pagamento:
 1. **Crea webhook su Stripe Dashboard**
 2. **URL:** `https://your-domain.vercel.app/api/stripe/webhook`
 3. **Eventi:** `checkout.session.completed`, `payment_intent.succeeded`
-4. **Aggiungi variabile:** `STRIPE_WEBHOOK_SECRET=whsec_...`
+4. **Aggiungi variabile:** `STRIPE_WEBHOOK_SECRET=whsec_[...]`
 
 ## 🚀 Deploy su Vercel
 

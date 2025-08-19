@@ -1,0 +1,26 @@
+{
+  "name": "cv-analyzer-scripts",
+  "version": "1.0.0",
+  "description": "Script di configurazione per CV Analyzer",
+  "type": "module",
+  "scripts": {
+    "setup-stripe-webhook": "node setup-stripe-webhook.js",
+    "setup-vercel-env": "node setup-vercel-env.js",
+    "setup-production": "npm run setup-stripe-webhook && npm run setup-vercel-env"
+  },
+  "dependencies": {
+    "stripe": "^14.0.0",
+    "dotenv": "^16.0.0",
+    "node-fetch": "^3.3.0"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "stripe",
+    "vercel",
+    "production",
+    "setup",
+    "cv-analyzer"
+  ],
+  "author": "CV Analyzer Team",
+  "license": "MIT"
+}

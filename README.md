@@ -215,7 +215,7 @@ VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_actual_publishable_key_here
 Nel file `api/.env`:
 ```env
 STRIPE_SECRET_KEY=sk_test_your_actual_secret_key_here
-STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret_here
+STRIPE_WEBHOOK_SECRET=whsec_[your_webhook_secret_here]
 ```
 
 #### Trova le Tue Chiavi Stripe
@@ -285,7 +285,7 @@ Per gestire gli eventi di pagamento, configura un webhook Stripe:
 # Produzione
 VITE_SUPABASE_URL=https://your-prod-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your_prod_supabase_anon_key
-VITE_STRIPE_PUBLISHABLE_KEY=pk_live_your_live_stripe_key
+VITE_STRIPE_PUBLISHABLE_KEY=pk_live_[your_live_stripe_key]
 VITE_API_BASE_URL=https://your-api-domain.com/api
 VITE_APP_URL=https://your-domain.com
 VITE_DEV_MODE=false
