@@ -17,8 +17,7 @@ export const BUNDLES = {
     price: 4.99,
     credits: 4,
     currency: 'EUR',
-    description: 'Ideale per chi vuole testare il nostro servizio',
-    paymentLink: 'https://buy.stripe.com/aFabJ0cEc1un5E8aZY0Ba06'
+    description: 'Ideale per chi vuole testare il nostro servizio'
   },
   value: {
     id: 'value',
@@ -26,14 +25,13 @@ export const BUNDLES = {
     price: 9.99,
     credits: 10,
     currency: 'EUR',
-    description: 'La scelta migliore per chi cerca il massimo valore',
-    paymentLink: 'https://buy.stripe.com/00wbJ00Vu0qj4A45FE0Ba05'
+    description: 'La scelta migliore per chi cerca il massimo valore'
   }
 } as const;
 
 export type BundleId = keyof typeof BUNDLES;
 
-// Create checkout session - now redirects directly to Stripe payment links
+// Create checkout session
 export const createCheckoutSession = async (bundleId: BundleId, userId: string) => {
   try {
     const bundle = BUNDLES[bundleId];
@@ -41,47 +39,56 @@ export const createCheckoutSession = async (bundleId: BundleId, userId: string) 
       throw new Error('Invalid bundle selected');
     }
 
-    // Store user info in sessionStorage for post-payment processing
-    sessionStorage.setItem('pendingPayment', JSON.stringify({
-      bundleId,
-      userId,
-      timestamp: Date.now()
-    }));
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+    const response = await fetch(`${apiBaseUrl}/stripe/create-checkout-session`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        bundleId,
+        userId,
+        successUrl: `${window.location.origin}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${window.location.origin}/pricing`,
+      }),
+    });
 
-    // Redirect directly to Stripe payment link
-    window.location.href = bundle.paymentLink;
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to create checkout session');
+    }
+
+    const { sessionId } = await response.json();
+    
+    const stripe = await getStripe();
+    if (!stripe) {
+      throw new Error('Stripe failed to initialize');
+    }
+
+    // Redirect to Stripe Checkout
+    const { error } = await stripe.redirectToCheckout({
+      sessionId,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
   } catch (error) {
     console.error('Checkout error:', error);
     throw error;
   }
 };
 
-// Verify payment session - updated for payment links
+// Verify payment session
 export const verifyPaymentSession = async (sessionId: string) => {
   try {
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
-    
-    // Get pending payment info from sessionStorage
-    const pendingPaymentStr = sessionStorage.getItem('pendingPayment');
-    let pendingPayment = null;
-    
-    if (pendingPaymentStr) {
-      try {
-        pendingPayment = JSON.parse(pendingPaymentStr);
-      } catch (error) {
-        console.error('Error parsing pending payment:', error);
-      }
-    }
-    
-    const response = await fetch(`${apiBaseUrl}/payment-links/verify-session`, {
+    const response = await fetch(`${apiBaseUrl}/stripe/verify-session`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ 
-        sessionId,
-        pendingPayment 
-      }),
+      body: JSON.stringify({ sessionId }),
     });
 
     if (!response.ok) {
@@ -89,9 +96,6 @@ export const verifyPaymentSession = async (sessionId: string) => {
       throw new Error(errorData.error || 'Failed to verify payment session');
     }
 
-    // Clear pending payment from sessionStorage after successful verification
-    sessionStorage.removeItem('pendingPayment');
-    
     return await response.json();
   } catch (error) {
     console.error('Payment verification error:', error);

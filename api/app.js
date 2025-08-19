@@ -2,20 +2,18 @@ import express from 'express';
 import cors from 'cors';
 
 // Import routes dynamically after dotenv is configured
-let stripeRouter, paymentLinksRouter, analyticsRouter, alertsRouter, rumRouter;
+let stripeRouter, analyticsRouter, alertsRouter, rumRouter;
 
 // Function to initialize routes
 export async function initializeRoutes() {
-  const [stripe, paymentLinks, analytics, alerts, rum] = await Promise.all([
+  const [stripe, analytics, alerts, rum] = await Promise.all([
     import('./routes/stripe.js'),
-    import('./routes/payment-links.js'),
     import('./routes/analytics.js'),
     import('./routes/alerts.js'),
     import('./routes/rum.js')
   ]);
   
   stripeRouter = stripe.default;
-  paymentLinksRouter = paymentLinks.default;
   analyticsRouter = analytics.default;
   alertsRouter = alerts.default;
   rumRouter = rum.default;
@@ -43,9 +41,6 @@ export function setupRoutes() {
   // Routes (mounted under both /api and root for flexibility)
   if (stripeRouter) {
     app.use(['/api/stripe', '/stripe'], stripeRouter);
-  }
-  if (paymentLinksRouter) {
-    app.use(['/api/payment-links', '/payment-links'], paymentLinksRouter);
   }
   if (analyticsRouter) {
     app.use(['/api/analytics', '/analytics'], analyticsRouter);

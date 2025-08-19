@@ -31,8 +31,7 @@ const BUNDLES = {
     price: 4.99,
     credits: 4,
     currency: 'EUR',
-    description: 'Ideale per chi vuole testare il nostro servizio',
-    paymentLink: 'https://buy.stripe.com/aFabJ0cEc1un5E8aZY0Ba06'
+    description: 'Ideale per chi vuole testare il nostro servizio'
   },
   value: {
     id: 'value',
@@ -40,8 +39,7 @@ const BUNDLES = {
     price: 9.99,
     credits: 10,
     currency: 'EUR',
-    description: 'La scelta migliore per chi cerca il massimo valore',
-    paymentLink: 'https://buy.stripe.com/00wbJ00Vu0qj4A45FE0Ba05'
+    description: 'La scelta migliore per chi cerca il massimo valore'
   }
 };
 

@@ -24,7 +24,6 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
 const PaymentCancelPage = lazy(() => import('./pages/PaymentCancelPage'));
-const PaymentErrorPage = lazy(() => import('./pages/PaymentErrorPage'));
 
 // Components
 import Layout from './components/shared/Layout';
@@ -115,14 +114,6 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <PaymentCancelPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/payment/error"
-        element={
-          <ProtectedRoute>
-            <PaymentErrorPage />
           </ProtectedRoute>
         }
       />
