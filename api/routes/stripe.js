@@ -48,7 +48,7 @@ router.post('/create-checkout-session', async (req, res) => {
       return res.status(500).json({ error: 'Stripe not configured. Please set up your Stripe secret key.' });
     }
 
-    const { bundleId, userId, successUrl, cancelUrl } = req.body;
+    const { bundleId, userId, successUrl, cancelUrl, couponCode } = req.body;
 
     // Validate input
     if (!bundleId || !userId || !successUrl || !cancelUrl) {
@@ -69,6 +69,50 @@ router.post('/create-checkout-session', async (req, res) => {
 
     if (userError || !user) {
       return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Validate coupon if provided
+    let couponData = null;
+    let discountAmount = 0;
+    let finalAmount = bundle.price;
+    
+    if (couponCode) {
+      const { data: validationResult, error: couponError } = await supabase.rpc('validate_coupon', {
+        p_code: couponCode.toUpperCase(),
+        p_user_id: userId,
+        p_amount: Math.round(bundle.price * 100) // Amount in cents
+      });
+
+      if (couponError || !validationResult || validationResult.length === 0) {
+        return res.status(400).json({ error: 'Coupon non valido o scaduto' });
+      }
+
+      const validation = validationResult[0];
+      if (!validation.is_valid) {
+        return res.status(400).json({ 
+          error: validation.error_message || 'Coupon non valido'
+        });
+      }
+
+      // Get coupon details
+      const { data: coupon, error: couponDetailsError } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('id', validation.coupon_id)
+        .single();
+
+      if (couponDetailsError || !coupon) {
+        return res.status(400).json({ error: 'Errore nel recupero del coupon' });
+      }
+
+      couponData = coupon;
+      discountAmount = validation.discount_amount / 100; // Convert from cents to euros
+      finalAmount = bundle.price - discountAmount;
+      
+      // Ensure final amount is not negative
+      if (finalAmount < 0) {
+        finalAmount = 0;
+      }
     }
 
     // Determina se usare Price ID predefinito o creare prezzo dinamicamente
@@ -94,15 +138,15 @@ router.post('/create-checkout-session', async (req, res) => {
               name: bundle.name,
               description: bundle.description,
             },
-            unit_amount: Math.round(bundle.price * 100), // Convert to cents
+            unit_amount: Math.round(finalAmount * 100), // Use final amount after discount
           },
           quantity: 1,
         },
       ];
     }
 
-    // Create Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
+    // Prepare session configuration
+    const sessionConfig = {
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
@@ -114,15 +158,42 @@ router.post('/create-checkout-session', async (req, res) => {
         bundleId,
         credits: bundle.credits.toString(),
         planName: bundle.name,
+        originalAmount: bundle.price.toString(),
+        finalAmount: finalAmount.toString(),
+        ...(couponData && {
+          couponId: couponData.id.toString(),
+          couponCode: couponData.code,
+          discountAmount: discountAmount.toString()
+        })
       },
-    });
+    };
+
+    // Add Stripe coupon if available and using predefined prices
+    if (couponData && bundle.stripePriceId) {
+      try {
+        // Try to use Stripe coupon if it exists
+        const stripeCoupons = await stripe.coupons.list({ limit: 100 });
+        const stripeCoupon = stripeCoupons.data.find(c => c.id === couponData.code);
+        
+        if (stripeCoupon) {
+          sessionConfig.discounts = [{
+            coupon: couponData.code
+          }];
+        }
+      } catch (stripeError) {
+        console.log('Stripe coupon not found, using custom discount calculation');
+      }
+    }
+
+    // Create Stripe checkout session
+    const session = await stripe.checkout.sessions.create(sessionConfig);
 
     // Store pending transaction in database
-    const { error: transactionError } = await supabase
+    const { data: paymentData, error: transactionError } = await supabase
       .from('payments')
       .insert({
         user_id: userId,
-        amount: Math.round(bundle.price * 100), // Convert to cents
+        amount: Math.round(finalAmount * 100), // Final amount after discount in cents
         currency: bundle.currency,
         status: 'pending',
         stripe_payment_intent_id: `pending_${session.id}`, // Temporary placeholder, will be updated by webhook
@@ -132,15 +203,50 @@ router.post('/create-checkout-session', async (req, res) => {
         metadata: {
           bundle_name: bundle.name,
           stripe_session_id: session.id,
+          original_amount: Math.round(bundle.price * 100),
+          discount_amount: Math.round(discountAmount * 100),
+          ...(couponData && {
+            coupon_id: couponData.id,
+            coupon_code: couponData.code
+          })
         },
-      });
+      })
+      .select()
+      .single();
 
     if (transactionError) {
       console.error('Error storing transaction:', transactionError);
       // Continue anyway - webhook will handle the transaction
     }
 
-    res.json({ sessionId: session.id });
+    // Apply coupon usage if coupon was used and payment was created successfully
+    if (couponData && paymentData && !transactionError) {
+      try {
+        await supabase.rpc('apply_coupon', {
+          p_coupon_id: couponData.id,
+          p_user_id: userId,
+          p_payment_id: paymentData.id,
+          p_original_amount: Math.round(bundle.price * 100),
+          p_discount_amount: Math.round(discountAmount * 100),
+          p_stripe_coupon_id: couponData.code
+        });
+      } catch (couponApplyError) {
+        console.error('Error applying coupon:', couponApplyError);
+        // Don't fail the checkout, just log the error
+      }
+    }
+
+    res.json({ 
+      sessionId: session.id,
+      ...(couponData && {
+        couponApplied: {
+          code: couponData.code,
+          discountAmount,
+          originalAmount: bundle.price,
+          finalAmount
+        }
+      })
+    });
   } catch (error) {
     console.error('Checkout session creation error:', error);
     res.status(500).json({ error: 'Failed to create checkout session' });
