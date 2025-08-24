@@ -3,20 +3,16 @@
   "buildCommand": "pnpm build",
   "outputDirectory": "dist",
   "functions": {
-    "api/[...path].js": {
+    "api/**/*.js": {
       "memory": 1024,
       "maxDuration": 30
-    },
-    "api/app.js": {
-      "memory": 1024,
-      "maxDuration": 30
-    },
-    "api/server.js": {
-      "memory": 512,
-      "maxDuration": 10
     }
   },
   "rewrites": [
+    {
+      "source": "/api/stripe/create-checkout-session",
+      "destination": "/api/stripe/create-checkout-session.js"
+    },
     {
       "source": "/api/(.*)",
       "destination": "/api/[...path].js"
