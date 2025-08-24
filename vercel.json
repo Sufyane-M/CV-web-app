@@ -10,7 +10,7 @@
   },
   "headers": [
     {
-      "source": "/(.*)\.js",
+      "source": "/(.*)\\.js",
       "headers": [
         {
           "key": "Content-Type",
@@ -19,7 +19,7 @@
       ]
     },
     {
-      "source": "/(.*)\.mjs",
+      "source": "/(.*)\\.mjs",
       "headers": [
         {
           "key": "Content-Type",
@@ -37,7 +37,10 @@
       "source": "/api/(.*)",
       "destination": "/api/[...path].js"
     },
-    { "source": "/((?!api).*)", "destination": "/index.html" }
+    {
+      "source": "/((?!api).*)",
+      "destination": "/index.html"
+    }
   ]
 }
 
