@@ -22,6 +22,7 @@ const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const AnalysisDetailPage = lazy(() => import('./pages/AnalysisDetailPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
 const PaymentCancelPage = lazy(() => import('./pages/PaymentCancelPage'));
 
@@ -101,6 +102,14 @@ const AppRoutes: React.FC = () => {
         <Route path="/pricing" element={<Layout><PricingPage /></Layout>} />
       
       {/* Payment Routes */}
+      <Route
+        path="/payment/checkout"
+        element={
+          <ProtectedRoute>
+            <CheckoutPage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/payment/success"
         element={

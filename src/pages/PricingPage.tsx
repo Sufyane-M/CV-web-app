@@ -18,6 +18,7 @@ import Button from '../components/ui/Button';
 import Card, { CardHeader, CardContent, CardFooter } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import { createCheckoutSession, BUNDLES, formatPrice, type BundleId } from '../services/stripe';
+import { PaymentLinkGenerator } from '../components/stripe/StripeCheckoutWithCoupon';
 // import PaymentDebugPanel from '../components/PaymentDebugPanel'; // Temporarily disabled
 
 interface Bundle {
@@ -204,7 +205,7 @@ const PricingPage: React.FC = () => {
     },
     {
       question: 'Quali metodi di pagamento sono accettati?',
-      answer: 'Accettiamo le principali carte di credito e debito (Visa, Mastercard, American Express) tramite il nostro partner di pagamento sicuro Stripe.',
+      answer: 'Accettiamo le principali carte di credito e debito (Visa, Mastercard, American Express) e PayPal tramite il nostro partner di pagamento sicuro Stripe.',
       icon: CreditCard,
     },
     {
@@ -267,6 +268,21 @@ const PricingPage: React.FC = () => {
               <p className="text-gray-600 dark:text-gray-400">
                 Il nostro team è a tua disposizione per qualsiasi domanda.
               </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Sezione Generatore Link di Pagamento */}
+        <div className="mt-20">
+          <div className="mx-auto max-w-3xl">
+            <div className="rounded-2xl bg-white p-8 shadow-lg dark:bg-gray-800">
+              <h2 className="mb-6 text-center text-2xl font-bold text-gray-900 dark:text-white">
+                Genera Link di Pagamento
+              </h2>
+              <p className="mb-8 text-center text-gray-600 dark:text-gray-400">
+                Crea link di pagamento personalizzati con codici coupon per condividerli facilmente.
+              </p>
+              <PaymentLinkGenerator />
             </div>
           </div>
         </div>

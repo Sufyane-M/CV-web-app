@@ -15,7 +15,8 @@
 
 .gradient-animated {
   background-size: 200% 200%;
-  animation: gradient-shift 6s ease infinite;
+  animation: gradient-shift 3s ease-in-out infinite;
+  will-change: background-position;
 }
 
 /* Score circle animations */

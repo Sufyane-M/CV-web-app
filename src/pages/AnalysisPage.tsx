@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Play, Eye, EyeOff, CreditCard, FileText, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,7 +19,7 @@ import { useRealtimeAnalysis } from '../hooks/useRealtimeAnalysis';
 import type { CVAnalysis, UserProfile } from '../types/index';
 import { formatDate } from '../utils/formatters';
 import ErrorFallback from '../components/ErrorFallback';
-import EnhancedAnalysisResults from '../components/cv-analysis/EnhancedAnalysisResults';
+const EnhancedAnalysisResults = lazy(() => import('../components/cv-analysis/EnhancedAnalysisResults'));
 import '../styles/enhanced-analysis.css';
 
 // Types
@@ -543,11 +543,20 @@ const AnalysisPage: React.FC = () => {
         )}
 
         {analysisState.step === 'results' && analysis && (
-          <EnhancedAnalysisResults 
-            analysis={analysis} 
-            onNewAnalysis={resetAnalysis}
-            onUpgrade={handleUpgrade}
-          />
+          <Suspense fallback={
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                <p className="text-gray-600 dark:text-gray-400">Caricamento risultati...</p>
+              </div>
+            </div>
+          }>
+            <EnhancedAnalysisResults 
+              analysis={analysis} 
+              onNewAnalysis={resetAnalysis}
+              onUpgrade={handleUpgrade}
+            />
+          </Suspense>
         )}
       </div>
     </div>

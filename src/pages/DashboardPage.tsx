@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PlusIcon, ArrowRightIcon, SparklesIcon, BookOpenIcon, PlayIcon, ChartBarIcon, CreditCardIcon } from '@heroicons/react/24/outline';
 import {
@@ -10,13 +10,13 @@ import Button from '../components/ui/Button';
 import Card, { CardHeader, CardContent } from '../components/ui/Card';
 import { CreditBadge } from '../components/ui/Badge';
 import Loading from '../components/ui/Loading';
-import CreditsCard from '../components/dashboard/CreditsCard';
-import RecentAnalysesList from '../components/dashboard/RecentAnalysesList';
-import TotalAnalysesCard from '../components/dashboard/TotalAnalysesCard';
+const CreditsCard = lazy(() => import('../components/dashboard/CreditsCard'));
+const RecentAnalysesList = lazy(() => import('../components/dashboard/RecentAnalysesList'));
+const TotalAnalysesCard = lazy(() => import('../components/dashboard/TotalAnalysesCard'));
+const QuickStartGuide = lazy(() => import('../components/dashboard/QuickStartGuide'));
 import { formatRelativeTime } from '../utils/formatters';
 import { dashboardService, type DashboardStats } from '../services/dashboardService';
 import type { CVAnalysis } from '../services/supabase';
-import QuickStartGuide from '../components/dashboard/QuickStartGuide';
 
 
 // Animated Counter Component
@@ -159,24 +159,32 @@ const DashboardPage: React.FC = () => {
           {/* Main Content */}
           <div className="xl:col-span-2 space-y-6">
             {/* Total Analyses Card (redesigned UI, same data) */}
-            <TotalAnalysesCard
-              total={stats.totalAnalyses}
-              onViewHistory={() => navigate('/history')}
-            />
+            <Suspense fallback={<div className="h-32 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse"></div>}>
+              <TotalAnalysesCard
+                total={stats.totalAnalyses}
+                onViewHistory={() => navigate('/history')}
+              />
+            </Suspense>
 
-            <RecentAnalysesList analyses={recentAnalyses} />
+            <Suspense fallback={<div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse"></div>}>
+              <RecentAnalysesList analyses={recentAnalyses} />
+            </Suspense>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Credits Card */}
-            <CreditsCard 
-              credits={stats.userCredits} 
-              hasFreeAnalysisAvailable={stats.hasFreeAnalysisAvailable}
-            />
+            <Suspense fallback={<div className="h-40 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse"></div>}>
+              <CreditsCard 
+                credits={stats.userCredits} 
+                hasFreeAnalysisAvailable={stats.hasFreeAnalysisAvailable}
+              />
+            </Suspense>
 
             {/* Quick Start Guide */}
-            <QuickStartGuide />
+            <Suspense fallback={<div className="h-48 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse"></div>}>
+              <QuickStartGuide />
+            </Suspense>
             
 
           </div>

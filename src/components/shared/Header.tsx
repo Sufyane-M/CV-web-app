@@ -34,6 +34,7 @@ const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [hasFreeAnalysisAvailable, setHasFreeAnalysisAvailable] = useState(false);
+  const mobileMenuButtonRef = React.useRef<HTMLButtonElement>(null);
 
   // Fetch free analysis availability
   React.useEffect(() => {
@@ -50,6 +51,33 @@ const Header: React.FC = () => {
 
     fetchFreeAnalysisAvailability();
   }, [user?.id]);
+
+  // Handle keyboard navigation and focus management
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && (isMobileMenuOpen || isUserMenuOpen)) {
+        setIsMobileMenuOpen(false);
+        setIsUserMenuOpen(false);
+        // Return focus to the button that opened the menu
+        if (mobileMenuButtonRef.current) {
+          mobileMenuButtonRef.current.focus();
+        }
+      }
+    };
+
+    if (isMobileMenuOpen || isUserMenuOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      // Prevent body scroll when menu is open
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobileMenuOpen, isUserMenuOpen]);
 
   // Navigation items
   const navigationItems = [
@@ -262,18 +290,33 @@ const Header: React.FC = () => {
                 </div>
 
                 {/* Mobile Menu Button */}
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
+                  ref={mobileMenuButtonRef}
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-colors duration-200 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  aria-expanded={isMobileMenuOpen}
+                  aria-controls="mobile-menu"
+                  aria-label={isMobileMenuOpen ? 'Chiudi menu di navigazione' : 'Apri menu di navigazione'}
+                  type="button"
                 >
-                  {isMobileMenuOpen ? (
-                    <XMarkIcon className="h-5 w-5" />
-                  ) : (
-                    <Bars3Icon className="h-5 w-5" />
-                  )}
-                </Button>
+                  <div className="relative w-5 h-5">
+                    <span 
+                      className={`absolute block w-5 h-0.5 bg-gray-600 dark:bg-gray-300 transition-all duration-300 ease-in-out ${
+                        isMobileMenuOpen ? 'rotate-45 top-2' : 'top-1'
+                      }`}
+                    />
+                    <span 
+                      className={`absolute block w-5 h-0.5 bg-gray-600 dark:bg-gray-300 transition-all duration-300 ease-in-out top-2 ${
+                        isMobileMenuOpen ? 'opacity-0' : 'opacity-100'
+                      }`}
+                    />
+                    <span 
+                      className={`absolute block w-5 h-0.5 bg-gray-600 dark:bg-gray-300 transition-all duration-300 ease-in-out ${
+                        isMobileMenuOpen ? '-rotate-45 top-2' : 'top-3'
+                      }`}
+                    />
+                  </div>
+                </button>
               </>
             ) : (
               /* Login/Register buttons for non-authenticated users */
@@ -294,9 +337,19 @@ const Header: React.FC = () => {
         </div>
 
         {/* Mobile Navigation */}
-        {user && isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 dark:border-gray-800 py-4">
-            <nav className="space-y-2">
+        {user && (
+          <div 
+             id="mobile-menu"
+             className={`md:hidden fixed inset-x-0 top-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-lg transition-all duration-300 ease-in-out transform ${
+               isMobileMenuOpen 
+                 ? 'translate-y-0 opacity-100 visible' 
+                 : '-translate-y-full opacity-0 invisible'
+             }`}
+             style={{ zIndex: 45 }}
+             role="dialog"
+             aria-modal="true"
+           >
+            <nav className="px-4 py-6 space-y-1" role="navigation" aria-label="Menu di navigazione mobile">
               {navigationItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = isActiveRoute(item.href);
@@ -304,22 +357,47 @@ const Header: React.FC = () => {
                   <Link
                     key={item.name}
                     to={item.href}
-                    onClick={(e) => {
-                      e.preventDefault();
+                    onClick={() => {
                       setIsMobileMenuOpen(false);
-                      navigate(item.href);
                     }}
-                    className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      isActive
-                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                    }`}
+                    className={`flex items-center px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 touch-manipulation min-h-[48px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 ${
+                       isActive
+                         ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 shadow-sm'
+                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700'
+                     }`}
+                    aria-current={isActive ? 'page' : undefined}
                   >
-                    <Icon className="h-4 w-4 mr-3" />
-                    {item.name}
+                    <Icon className="h-5 w-5 mr-4 flex-shrink-0" aria-hidden="true" />
+                    <span className="flex-1">{item.name}</span>
                   </Link>
                 );
               })}
+              
+              {/* Mobile Credits/Free Analysis Badge */}
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+                {hasFreeAnalysisAvailable ? (
+                  <div className="flex items-center justify-center">
+                    <Badge
+                      variant="success"
+                      size="md"
+                      className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                      leftIcon={<SparklesIcon className="h-4 w-4" />}
+                    >
+                      Analisi Gratuita Disponibile
+                    </Badge>
+                  </div>
+                ) : profile?.credits !== undefined && (
+                  <div className="flex items-center justify-center">
+                    <Badge
+                      variant={getCreditsBadgeVariant()}
+                      size="md"
+                      leftIcon={<CreditCardIcon className="h-4 w-4" />}
+                    >
+                      {profile.credits} crediti rimanenti
+                    </Badge>
+                  </div>
+                )}
+              </div>
             </nav>
           </div>
         )}
@@ -333,6 +411,13 @@ const Header: React.FC = () => {
             setIsUserMenuOpen(false);
             setIsMobileMenuOpen(false);
           }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setIsUserMenuOpen(false);
+              setIsMobileMenuOpen(false);
+            }
+          }}
+          aria-hidden="true"
         />
       )}
     </header>

@@ -147,7 +147,7 @@ router.post('/create-checkout-session', async (req, res) => {
 
     // Prepare session configuration
     const sessionConfig = {
-      payment_method_types: ['card'],
+      payment_method_types: ['card', 'paypal'],
       line_items: lineItems,
       mode: 'payment',
       success_url: successUrl,

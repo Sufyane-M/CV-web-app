@@ -171,7 +171,7 @@ const CheckoutWithCoupon: React.FC<CheckoutWithCouponProps> = ({
 
       {/* Informazioni aggiuntive */}
       <div className="mt-4 text-xs text-gray-500 text-center">
-        <p>Pagamento sicuro tramite Stripe</p>
+        <p>Pagamento sicuro tramite Stripe (Carte di credito e PayPal)</p>
         <p>I crediti verranno aggiunti automaticamente al tuo account</p>
       </div>
     </div>

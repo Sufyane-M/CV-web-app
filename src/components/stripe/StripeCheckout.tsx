@@ -1,19 +1,27 @@
 import React, { useState } from 'react';
 
 interface StripeCheckoutProps {
-  priceId?: string;
+  bundleId: string;
+  userId: string;
+  couponCode?: string;
   buttonText?: string;
   className?: string;
   onSuccess?: () => void;
   onError?: (error: string) => void;
+  successUrl?: string;
+  cancelUrl?: string;
 }
 
 const StripeCheckout: React.FC<StripeCheckoutProps> = ({
-  priceId = 'price_xxx',
+  bundleId,
+  userId,
+  couponCode,
   buttonText = 'Acquista Ora',
   className = '',
   onSuccess,
-  onError
+  onError,
+  successUrl = `${window.location.origin}/payment/success`,
+  cancelUrl = `${window.location.origin}/payment/cancel`
 }) => {
   const [loading, setLoading] = useState(false);
 
@@ -28,7 +36,11 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          priceId, // Opzionale: puoi passare dati aggiuntivi se necessario
+          bundleId,
+          userId,
+          couponCode,
+          successUrl,
+          cancelUrl
         }),
       });
 
@@ -80,7 +92,13 @@ export const useStripeCheckout = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createCheckoutSession = async (options?: { priceId?: string }) => {
+  const createCheckoutSession = async (options: {
+    bundleId: string;
+    userId: string;
+    couponCode?: string;
+    successUrl?: string;
+    cancelUrl?: string;
+  }) => {
     setLoading(true);
     setError(null);
     
@@ -91,7 +109,11 @@ export const useStripeCheckout = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          priceId: options?.priceId || 'price_xxx',
+          bundleId: options.bundleId,
+          userId: options.userId,
+          couponCode: options.couponCode,
+          successUrl: options.successUrl || `${window.location.origin}/payment/success`,
+          cancelUrl: options.cancelUrl || `${window.location.origin}/payment/cancel`
         }),
       });
 
