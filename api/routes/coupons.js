@@ -2,13 +2,13 @@ import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 import dotenv from 'dotenv';
-import {
-  couponValidationLimiter,
-  couponApplicationLimiter,
-  couponSecurityMiddleware,
-  secureCouponApplication,
-  logSecurityEvent
-} from '../../src/middleware/couponSecurity.js';
+// import {
+//   couponValidationLimiter,
+//   couponApplicationLimiter,
+//   couponSecurityMiddleware,
+//   secureCouponApplication,
+//   logSecurityEvent
+// } from '../../src/middleware/couponSecurity.js';
 
 // Carica le variabili d'ambiente
 dotenv.config();
@@ -82,7 +82,7 @@ const requireAdmin = async (req, res, next) => {
  * GET /api/coupons/validate/:code
  * Valida un coupon per un utente specifico
  */
-router.get('/validate/:code', couponValidationLimiter, ...couponSecurityMiddleware, authenticateUser, async (req, res) => {
+router.get('/validate/:code', /* couponValidationLimiter, ...couponSecurityMiddleware, */ authenticateUser, async (req, res) => {
   try {
     const { code } = req.params;
     const { amount } = req.query;
@@ -145,7 +145,7 @@ router.get('/validate/:code', couponValidationLimiter, ...couponSecurityMiddlewa
  * POST /api/coupons/apply
  * Applica un coupon a un pagamento
  */
-router.post('/apply', couponApplicationLimiter, ...secureCouponApplication, authenticateUser, async (req, res) => {
+router.post('/apply', /* couponApplicationLimiter, ...secureCouponApplication, */ authenticateUser, async (req, res) => {
   try {
     const { couponId, paymentId, originalAmount, discountAmount, stripeCouponId } = req.body;
     const userId = req.user.id;

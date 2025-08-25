@@ -2,23 +2,17 @@ import express from 'express';
 import cors from 'cors';
 
 // Import routes dynamically after dotenv is configured
-let stripeRouter, analyticsRouter, alertsRouter, rumRouter, couponsRouter, couponAdminRouter;
+let stripeRouter, couponsRouter, couponAdminRouter;
 
 // Function to initialize routes
 export async function initializeRoutes() {
-  const [stripe, analytics, alerts, rum, coupons, couponAdmin] = await Promise.all([
+  const [stripe, coupons, couponAdmin] = await Promise.all([
     import('./routes/stripe.js'),
-    import('./routes/analytics.js'),
-    import('./routes/alerts.js'),
-    import('./routes/rum.js'),
     import('./routes/coupons.js'),
     import('./routes/couponAdmin.js')
   ]);
   
   stripeRouter = stripe.default;
-  analyticsRouter = analytics.default;
-  alertsRouter = alerts.default;
-  rumRouter = rum.default;
   couponsRouter = coupons.default;
   couponAdminRouter = couponAdmin.default;
 }
@@ -45,15 +39,6 @@ export function setupRoutes() {
   // Routes (mounted under both /api and root for flexibility)
   if (stripeRouter) {
     app.use(['/api/stripe', '/stripe'], stripeRouter);
-  }
-  if (analyticsRouter) {
-    app.use(['/api/analytics', '/analytics'], analyticsRouter);
-  }
-  if (alertsRouter) {
-    app.use(['/api/alerts', '/alerts'], alertsRouter);
-  }
-  if (rumRouter) {
-    app.use(['/api/rum', '/rum'], rumRouter);
   }
   if (couponsRouter) {
     app.use(['/api/coupons', '/coupons'], couponsRouter);
