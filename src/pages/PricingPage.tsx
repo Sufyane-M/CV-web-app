@@ -190,7 +190,7 @@ const PricingPage: React.FC = () => {
   const faqs = [
     {
       question: 'Come funziona il sistema a crediti?',
-      answer: 'Ogni credito ti permette di effettuare 1 analisi completa del CV. La prima analisi è sempre gratuita ma con funzionalità limitate. Acquistando un bundle, sblocchi immediatamente i risultati completi della prima analisi e ottieni crediti aggiuntivi per nuove analisi.',
+      answer: 'Ogni analisi completa del CV costa 2 crediti. La prima analisi è sempre gratuita ma con funzionalità limitate. Acquistando un bundle, sblocchi immediatamente i risultati completi della prima analisi e ottieni crediti aggiuntivi per nuove analisi.',
       icon: HelpCircle,
     },
     {

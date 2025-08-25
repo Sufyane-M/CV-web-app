@@ -72,12 +72,12 @@ class CreditService {
         };
       }
 
-      // Se ha crediti disponibili
-      if (creditsAvailable > 0) {
+      // Se ha crediti disponibili (ora richiede 2 crediti)
+      if (creditsAvailable >= 2) {
         return {
           canAnalyze: true,
           analysisType: 'paid',
-          creditsRequired: 1,
+          creditsRequired: 2,
           creditsAvailable,
           hasFreeAnalysisAvailable: false
         };
@@ -87,9 +87,9 @@ class CreditService {
       return {
         canAnalyze: false,
         analysisType: 'paid',
-        reason: 'Crediti insufficienti. Acquista un pacchetto per continuare.',
-        creditsRequired: 1,
-        creditsAvailable: 0,
+        reason: 'Crediti insufficienti. Servono 2 crediti per ogni analisi. Acquista un pacchetto per continuare.',
+        creditsRequired: 2,
+        creditsAvailable,
         hasFreeAnalysisAvailable: false
       };
 
@@ -141,7 +141,7 @@ class CreditService {
   }
 
   /**
-   * Consuma un credito per analisi a pagamento
+   * Consuma 2 crediti per analisi a pagamento
    */
   async consumeCredit(userId: string, analysisId: string): Promise<{ success: boolean; error?: string }> {
     try {
@@ -151,26 +151,26 @@ class CreditService {
         return { success: false, error: 'Profilo utente non trovato' };
       }
 
-      if ((profile.credits || 0) <= 0) {
+      if ((profile.credits || 0) < 2) {
         return { success: false, error: 'Crediti insufficienti' };
       }
 
-      // Aggiorna i crediti
+      // Aggiorna i crediti (detraendo 2 crediti)
       const { error: updateError } = await db.profiles.update(userId, {
-        credits: (profile.credits || 0) - 1,
+        credits: (profile.credits || 0) - 2,
         updated_at: new Date().toISOString()
       });
 
       if (updateError) {
-        console.error('Errore nella deduzione credito:', updateError);
-        return { success: false, error: 'Errore nella deduzione del credito' };
+        console.error('Errore nella deduzione crediti:', updateError);
+        return { success: false, error: 'Errore nella deduzione dei crediti' };
       }
 
       // Registra la transazione
       const { error: transactionError } = await db.creditTransactions.create({
         user_id: userId,
         type: 'consumption',
-        amount: -1,
+        amount: -2,
         description: 'Analisi CV a pagamento',
         analysis_id: analysisId
       });
@@ -183,7 +183,7 @@ class CreditService {
       return { success: true };
 
     } catch (error) {
-      console.error('Errore nel consumo credito:', error);
+      console.error('Errore nel consumo crediti:', error);
       return { success: false, error: 'Errore interno' };
     }
   }

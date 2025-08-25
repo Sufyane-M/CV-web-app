@@ -114,18 +114,27 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
           
-          {(rightIcon || isPassword) && (
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+          {(rightIcon || isPassword || (hasError && showErrorIcon)) && (
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center gap-1">
+              {hasError && showErrorIcon && (
+                <ExclamationCircleIcon 
+                  className={cn(
+                    'text-red-500 dark:text-red-400',
+                    iconSizeClasses[inputSize]
+                  )}
+                  aria-hidden="true"
+                />
+              )}
               {isPassword ? (
                 <button
                   type="button"
+                  onClick={() => setShowPassword(!showPassword)}
                   className={cn(
                     'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300',
-                    'focus:outline-none transition-colors duration-200',
+                    'focus:outline-none focus:text-gray-600 dark:focus:text-gray-300',
                     iconSizeClasses[inputSize]
                   )}
-                  onClick={() => setShowPassword(!showPassword)}
-                  tabIndex={-1}
+                  aria-label={showPassword ? 'Nascondi password' : 'Mostra password'}
                 >
                   {showPassword ? (
                     <EyeSlashIcon className={iconSizeClasses[inputSize]} />
@@ -133,27 +142,37 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
                     <EyeIcon className={iconSizeClasses[inputSize]} />
                   )}
                 </button>
-              ) : (
-                rightIcon && (
-                  <span className={cn('text-gray-400 dark:text-gray-500', iconSizeClasses[inputSize])}>
-                    {rightIcon}
-                  </span>
-                )
-              )}
+              ) : rightIcon ? (
+                <span className={cn('text-gray-400 dark:text-gray-500', iconSizeClasses[inputSize])}>
+                  {rightIcon}
+                </span>
+              ) : null}
             </div>
           )}
         </div>
         
-        {(error || helperText) && (
-          <div className="mt-1">
-            {error ? (
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        {error && (
+          <div className="mt-2">
+            {isErrorObject ? (
+              <ErrorMessage
+                {...(error as ErrorMessageConfig)}
+                compact
+                animated={false}
+                className="text-sm"
+              />
             ) : (
-              helperText && (
-                <p className="text-sm text-gray-500 dark:text-gray-400">{helperText}</p>
-              )
+              <div className="flex items-start gap-2 p-2 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50">
+                <ExclamationCircleIcon className="h-4 w-4 text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-red-800 dark:text-red-200" role="alert">
+                  {error as string}
+                </p>
+              </div>
             )}
           </div>
+        )}
+        
+        {helperText && !error && (
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{helperText}</p>
         )}
       </div>
     );

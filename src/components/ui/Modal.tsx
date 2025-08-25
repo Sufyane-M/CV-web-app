@@ -1,8 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { ExclamationTriangleIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
 import { cn } from '../../utils/cn';
 import Button from './Button';
+import { ErrorMessage } from './ErrorMessage';
+import { ErrorMessageConfig } from '../../utils/errorMessages';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -175,24 +178,26 @@ export interface ConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  title: string;
-  message: string;
+  title?: string;
+  message?: string;
+  error?: string | ErrorMessageConfig;
   confirmText?: string;
   cancelText?: string;
   variant?: 'danger' | 'warning' | 'info';
-  loading?: boolean;
+  isLoading?: boolean;
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   isOpen,
   onClose,
   onConfirm,
-  title,
-  message,
+  title = 'Conferma azione',
+  message = 'Sei sicuro di voler procedere?',
+  error,
   confirmText = 'Conferma',
   cancelText = 'Annulla',
-  variant = 'danger',
-  loading = false,
+  variant = 'info',
+  isLoading = false,
 }) => {
   const handleConfirm = () => {
     onConfirm();
@@ -204,30 +209,62 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={title}
       size="sm"
       footer={
         <>
           <Button
             variant="ghost"
             onClick={onClose}
-            disabled={loading}
+            disabled={isLoading}
           >
             {cancelText}
           </Button>
           <Button
             variant={buttonVariant}
             onClick={handleConfirm}
-            loading={loading}
+            loading={isLoading}
           >
             {confirmText}
           </Button>
         </>
       }
     >
-      <p className="text-gray-600 dark:text-gray-300">
-        {message}
-      </p>
+      <div className="flex items-center space-x-3">
+        {variant === 'danger' && (
+          <div className="flex-shrink-0">
+            <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
+          </div>
+        )}
+        {variant === 'warning' && (
+          <div className="flex-shrink-0">
+            <ExclamationTriangleIcon className="h-6 w-6 text-yellow-600" />
+          </div>
+        )}
+        {variant === 'info' && (
+          <div className="flex-shrink-0">
+            <InformationCircleIcon className="h-6 w-6 text-blue-600" />
+          </div>
+        )}
+        <div className="flex-1">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">{title}</h3>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{message}</p>
+          {error && (
+            <div className="mt-3">
+              {typeof error === 'string' ? (
+                <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400 p-2 rounded-md">
+                  {error}
+                </div>
+              ) : (
+                <ErrorMessage 
+                  config={error} 
+                  size="sm"
+                  variant="minimal"
+                />
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </Modal>
   );
 };
