@@ -150,6 +150,7 @@ router.post('/create-checkout-session', async (req, res) => {
       payment_method_types: ['card', 'paypal'],
       line_items: lineItems,
       mode: 'payment',
+      allow_promotion_codes: true, // Abilita il campo "Inserisci codice promozionale" nel form di Stripe
       success_url: successUrl,
       cancel_url: cancelUrl,
       customer_email: user.email,

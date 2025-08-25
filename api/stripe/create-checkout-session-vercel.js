@@ -164,6 +164,7 @@ module.exports = async function handler(req, res) {
         },
       ],
       mode: 'payment',
+      allow_promotion_codes: true, // Abilita il campo "Inserisci codice promozionale" nel form di Stripe
       success_url: successUrl,
       cancel_url: cancelUrl,
       customer_email: user.email,

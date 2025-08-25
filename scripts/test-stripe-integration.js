@@ -304,6 +304,7 @@ async function createTestCheckoutSession() {
       payment_method_types: ['card', 'paypal'],
       line_items: lineItems,
       mode: 'payment',
+      allow_promotion_codes: true, // Abilita il campo "Inserisci codice promozionale" nel form di Stripe
       success_url: `${appUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/cancel`,
       metadata: {
