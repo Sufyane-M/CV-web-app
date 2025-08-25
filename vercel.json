@@ -31,7 +31,15 @@
   "rewrites": [
     {
       "source": "/api/stripe/create-checkout-session",
-      "destination": "/api/stripe/create-checkout-session.js"
+      "destination": "/api/stripe/create-checkout-session-vercel.js"
+    },
+    {
+      "source": "/api/stripe/verify-session",
+      "destination": "/api/stripe/verify-session-vercel.js"
+    },
+    {
+      "source": "/api/stripe/webhook",
+      "destination": "/api/stripe/webhook-vercel.js"
     },
     {
       "source": "/api/(.*)",
