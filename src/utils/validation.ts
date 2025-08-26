@@ -11,55 +11,6 @@ export const FILE_VALIDATION = {
   ALLOWED_EXTENSIONS: ['.pdf'],
 } as const;
 
-import { ErrorMessageConfig, ERROR_MESSAGES } from './errorMessages';
-
-// Validazione dimensione file (5MB)
-export const validateFileSize = (file: File, maxSizeMB: number = 5): { isValid: boolean; error?: ErrorMessageConfig } => {
-  const maxSizeBytes = maxSizeMB * 1024 * 1024;
-  const isValid = file.size <= maxSizeBytes;
-  
-  if (!isValid) {
-    return {
-      isValid: false,
-      error: {
-        ...ERROR_MESSAGES.VALIDATION.FILE_TOO_LARGE,
-        message: `Il file deve essere inferiore a ${maxSizeMB}MB`,
-        description: `Il file selezionato (${(file.size / 1024 / 1024).toFixed(1)}MB) supera il limite di ${maxSizeMB}MB. Scegli un file più piccolo.`,
-      }
-    };
-  }
-  
-  return { isValid: true };
-};
-
-// Validazione tipo file PDF
-export const validateFileType = (file: File, allowedTypes: string[] = ['application/pdf']): { isValid: boolean; error?: ErrorMessageConfig } => {
-  const isValid = allowedTypes.includes(file.type);
-  
-  if (!isValid) {
-    const allowedExtensions = allowedTypes.map(type => {
-      switch (type) {
-        case 'application/pdf': return 'PDF';
-        case 'image/jpeg': return 'JPEG';
-        case 'image/png': return 'PNG';
-        case 'text/plain': return 'TXT';
-        default: return type;
-      }
-    }).join(', ');
-    
-    return {
-      isValid: false,
-      error: {
-        ...ERROR_MESSAGES.VALIDATION.INVALID_FILE_TYPE,
-        message: `Solo file ${allowedExtensions} sono supportati`,
-        description: `Il file selezionato non è del tipo corretto. Carica un file ${allowedExtensions}.`,
-      }
-    };
-  }
-  
-  return { isValid: true };
-};
-
 /**
  * Validate file type and size
  */
@@ -92,28 +43,10 @@ export const validateFile = (file: File): { isValid: boolean; error?: string } =
   return { isValid: true };
 };
 
-// Validazione email
-export const validateEmail = (email: string): { isValid: boolean; error?: ErrorMessageConfig } => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const isValid = emailRegex.test(email.trim());
-  
-  if (!isValid) {
-    return {
-      isValid: false,
-      error: {
-        ...ERROR_MESSAGES.VALIDATION.INVALID_EMAIL,
-        description: 'Inserisci un indirizzo email valido (es. nome@esempio.com).',
-      }
-    };
-  }
-  
-  return { isValid: true };
-};
-
 /**
  * Validate email format
  */
-export const validateEmailOld = (email: string): { isValid: boolean; error?: string } => {
+export const validateEmail = (email: string): { isValid: boolean; error?: string } => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   
   if (!email) {
@@ -125,74 +58,6 @@ export const validateEmailOld = (email: string): { isValid: boolean; error?: str
   }
   
   return { isValid: true };
-};
-
-// Validazione forza password
-export const validatePasswordStrength = (password: string): {
-  isValid: boolean;
-  score: number;
-  feedback: string[];
-  error?: ErrorMessageConfig;
-} => {
-  const feedback: string[] = [];
-  let score = 0;
-
-  if (password.length < 8) {
-    feedback.push('La password deve essere di almeno 8 caratteri');
-  } else {
-    score += 1;
-  }
-
-  if (!/[a-z]/.test(password)) {
-    feedback.push('Aggiungi almeno una lettera minuscola');
-  } else {
-    score += 1;
-  }
-
-  if (!/[A-Z]/.test(password)) {
-    feedback.push('Aggiungi almeno una lettera maiuscola');
-  } else {
-    score += 1;
-  }
-
-  if (!/[0-9]/.test(password)) {
-    feedback.push('Aggiungi almeno un numero');
-  } else {
-    score += 1;
-  }
-
-  if (!/[^A-Za-z0-9]/.test(password)) {
-    feedback.push('Aggiungi almeno un carattere speciale');
-  } else {
-    score += 1;
-  }
-
-  const isValid = score >= 3;
-  let error: ErrorMessageConfig | undefined;
-  
-  if (!isValid) {
-    if (password.length < 8) {
-      error = {
-        type: 'validation',
-        severity: 'error',
-        title: 'Password troppo corta',
-        message: 'La password deve essere di almeno 8 caratteri',
-        description: 'Scegli una password più lunga per garantire la sicurezza del tuo account.',
-      };
-    } else {
-      error = {
-        ...ERROR_MESSAGES.VALIDATION.WEAK_PASSWORD,
-        description: `Per rendere la password più sicura: ${feedback.join(', ').toLowerCase()}.`,
-      };
-    }
-  }
-
-  return {
-    isValid,
-    score,
-    feedback,
-    error,
-  };
 };
 
 /**
@@ -227,76 +92,12 @@ export const validatePassword = (password: string): { isValid: boolean; error?: 
   return { isValid: true, strength };
 };
 
-// Validazione campo obbligatorio
-export const validateRequired = (value: any, fieldName: string = 'Campo'): { isValid: boolean; error?: ErrorMessageConfig } => {
-  let isValid = false;
-  
-  if (typeof value === 'string') {
-    isValid = value.trim().length > 0;
-  } else {
-    isValid = value !== null && value !== undefined && value !== '';
-  }
-  
-  if (!isValid) {
-    return {
-      isValid: false,
-      error: {
-        ...ERROR_MESSAGES.VALIDATION.REQUIRED_FIELD,
-        message: `${fieldName} è obbligatorio`,
-        description: `Il campo "${fieldName}" deve essere compilato per continuare.`,
-      }
-    };
-  }
-  
-  return { isValid: true };
-};
-
 /**
  * Validate required field
  */
-export const validateRequiredOld = (value: string, fieldName: string): { isValid: boolean; error?: string } => {
+export const validateRequired = (value: string, fieldName: string): { isValid: boolean; error?: string } => {
   if (!value || value.trim().length === 0) {
     return { isValid: false, error: `${fieldName} è richiesto` };
-  }
-  
-  return { isValid: true };
-};
-
-// Validazione lunghezza minima
-export const validateMinLength = (value: string, minLength: number, fieldName: string = 'Campo'): { isValid: boolean; error?: ErrorMessageConfig } => {
-  const isValid = value.trim().length >= minLength;
-  
-  if (!isValid) {
-    return {
-      isValid: false,
-      error: {
-        type: 'validation',
-        severity: 'error',
-        title: 'Testo troppo corto',
-        message: `${fieldName} deve essere di almeno ${minLength} caratteri`,
-        description: `Inserisci almeno ${minLength} caratteri per "${fieldName}".`,
-      }
-    };
-  }
-  
-  return { isValid: true };
-};
-
-// Validazione lunghezza massima
-export const validateMaxLength = (value: string, maxLength: number, fieldName: string = 'Campo'): { isValid: boolean; error?: ErrorMessageConfig } => {
-  const isValid = value.trim().length <= maxLength;
-  
-  if (!isValid) {
-    return {
-      isValid: false,
-      error: {
-        type: 'validation',
-        severity: 'error',
-        title: 'Testo troppo lungo',
-        message: `${fieldName} non può superare ${maxLength} caratteri`,
-        description: `Riduci il testo di "${fieldName}" a massimo ${maxLength} caratteri (attualmente ${value.trim().length}).`,
-      }
-    };
   }
   
   return { isValid: true };
@@ -305,7 +106,7 @@ export const validateMaxLength = (value: string, maxLength: number, fieldName: s
 /**
  * Validate minimum length
  */
-export const validateMinLengthOld = (
+export const validateMinLength = (
   value: string,
   minLength: number,
   fieldName: string
@@ -323,7 +124,7 @@ export const validateMinLengthOld = (
 /**
  * Validate maximum length
  */
-export const validateMaxLengthOld = (
+export const validateMaxLength = (
   value: string,
   maxLength: number,
   fieldName: string

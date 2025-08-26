@@ -392,7 +392,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Helper functions
   const hasCredits = () => {
-    return profile ? profile.credits >= 2 : false; // Ora servono almeno 2 crediti per un'analisi
+    return profile ? profile.credits > 0 : false;
   };
 
   const isAuthenticated = () => {

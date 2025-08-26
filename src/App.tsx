@@ -26,9 +26,6 @@ const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
 const PaymentCancelPage = lazy(() => import('./pages/PaymentCancelPage'));
 
-// Development/Test Components
-const ErrorComponentsTest = lazy(() => import('./components/test/ErrorComponentsTest'));
-
 // Components
 import Layout from './components/shared/Layout';
 import Loading from './components/ui/Loading';
@@ -181,20 +178,6 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
-      
-      {/* Development/Test Routes */}
-      {process.env.NODE_ENV === 'development' && (
-        <Route
-          path="/test/errors"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <ErrorComponentsTest />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-      )}
       
       {/* Catch all route */}
       <Route path="*" element={<Navigate to="/" replace />} />

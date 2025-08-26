@@ -199,87 +199,11 @@ export const db = {
     },
 
     deductOnCompletion: async (userId: string, analysisId: string) => {
-      try {
-        // Verifica che l'analisi sia completata
-        const { data: analysis, error: analysisError } = await getSupabase()
-          .from('cv_analyses')
-          .select('status')
-          .eq('id', analysisId)
-          .eq('user_id', userId)
-          .single();
-
-        if (analysisError || !analysis || analysis.status !== 'completed') {
-          return { data: null, error: new Error('Analysis not completed or not found') };
-        }
-
-        // Verifica se già detratto (idempotenza)
-        const { data: existingDeduction } = await getSupabase()
-          .from('credit_deductions')
-          .select('id')
-          .eq('analysis_id', analysisId)
-          .single();
-
-        if (existingDeduction) {
-          // Già detratto, restituisci il saldo attuale
-          const { data: profile } = await getSupabase()
-            .from('user_profiles')
-            .select('credits')
-            .eq('id', userId)
-            .single();
-          return { data: [{ credits: profile?.credits || 0 }], error: null };
-        }
-
-        // Ottieni il profilo utente
-        const { data: profile, error: profileError } = await getSupabase()
-          .from('user_profiles')
-          .select('credits')
-          .eq('id', userId)
-          .single();
-
-        if (profileError || !profile) {
-          return { data: null, error: new Error('User profile not found') };
-        }
-
-        // Verifica crediti sufficienti (2 crediti)
-        if ((profile.credits || 0) < 2) {
-          return { data: [{ credits: profile.credits || 0 }], error: null };
-        }
-
-        // Detrai 2 crediti
-        const newCredits = (profile.credits || 0) - 2;
-        const { error: updateError } = await getSupabase()
-          .from('user_profiles')
-          .update({ 
-            credits: newCredits,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', userId);
-
-        if (updateError) {
-          return { data: null, error: updateError };
-        }
-
-        // Registra la detrazione
-        await getSupabase()
-          .from('credit_deductions')
-          .insert({ analysis_id: analysisId, user_id: userId });
-
-        // Registra la transazione
-        await getSupabase()
-          .from('credit_transactions')
-          .insert({
-            user_id: userId,
-            amount: -2,
-            type: 'consumption',
-            analysis_id: analysisId,
-            description: 'Detrazione 2 crediti per analisi completata',
-            created_at: new Date().toISOString()
-          });
-
-        return { data: [{ credits: newCredits }], error: null };
-      } catch (error) {
-        return { data: null, error };
-      }
+      const { data, error } = await getSupabase().rpc('deduct_credit_on_completion', {
+        p_user_id: userId,
+        p_analysis_id: analysisId,
+      });
+      return { data, error } as { data: { new_credits: number }[] | null, error: any };
     },
   },
 
@@ -539,7 +463,7 @@ export const utils = {
   hasCredits: async (userId: string): Promise<boolean> => {
     const { data, error } = await db.profiles.get(userId);
     if (error || !data) return false;
-    return data.credits >= 2; // Ora servono almeno 2 crediti per un'analisi
+    return data.credits > 0;
   },
 
   // Deduct credit and create transaction

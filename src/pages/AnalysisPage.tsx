@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Play, Eye, EyeOff, CreditCard, FileText, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,7 +19,6 @@ import { useRealtimeAnalysis } from '../hooks/useRealtimeAnalysis';
 import type { CVAnalysis, UserProfile } from '../types/index';
 import { formatDate } from '../utils/formatters';
 import ErrorFallback from '../components/ErrorFallback';
-import InsufficientCreditsError from '../components/error/InsufficientCreditsError';
 const EnhancedAnalysisResults = lazy(() => import('../components/cv-analysis/EnhancedAnalysisResults'));
 import '../styles/enhanced-analysis.css';
 
@@ -127,7 +126,7 @@ const AnalysisPage: React.FC = () => {
         if (!error && data && data.length > 0) {
           const newCredits = (data[0] as any).new_credits;
           if (typeof newCredits === 'number') {
-            showSuccess(`2 crediti detratti. Nuovo saldo: ${newCredits}`, { duration: 6000, dismissible: true });
+            showSuccess(`1 credito detratto. Nuovo saldo: ${newCredits}`, { duration: 6000, dismissible: true });
           }
         }
       }
@@ -533,21 +532,13 @@ const AnalysisPage: React.FC = () => {
 
         {analysisState.step === 'error' && (
           <div className="max-w-4xl mx-auto p-6">
-            {analysisState.error?.toLowerCase().includes('crediti insufficienti') ? (
-              <InsufficientCreditsError
-                onRetry={resetAnalysis}
-                creditsAvailable={profile?.credits || 0}
-                creditsRequired={2}
-              />
-            ) : (
-              <ErrorFallback
-                error={analysisState.error || 'Errore sconosciuto nell\'analisi'}
-                onRetry={resetAnalysis}
-                showHomeButton={false}
-                title="Errore nell'Analisi"
-                description="Si è verificato un problema durante l'analisi del tuo CV."
-              />
-            )}
+            <ErrorFallback
+              error={analysisState.error || 'Errore sconosciuto nell\'analisi'}
+              onRetry={resetAnalysis}
+              showHomeButton={false}
+              title="Errore nell'Analisi"
+              description="Si è verificato un problema durante l'analisi del tuo CV."
+            />
           </div>
         )}
 
