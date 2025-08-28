@@ -2,7 +2,6 @@ import { getSupabase } from './supabase';
 import { attachmentService, UploadedFileInfo } from './attachmentService';
 import { creditService } from './creditService';
 import { cacheService, CacheKeys } from './cacheService';
-import { timeoutService } from './timeoutService';
 import { keywordAnalysisService, KeywordAnalysisResult } from './keywordAnalysisService';
 import { Database } from '../types/database';
 
@@ -606,7 +605,7 @@ class AnalysisService {
   /**
    * Avvia il monitoraggio automatico dei timeout
    */
-  startTimeoutMonitoring(intervalMinutes?: number) {
+  async startTimeoutMonitoring(intervalMinutes?: number) {
     const interval = intervalMinutes ?? 2;
     if (this.timeoutMonitoringInterval) {
       if (import.meta.env.DEV) {
@@ -618,14 +617,16 @@ class AnalysisService {
     if (import.meta.env.DEV) {
       console.log(`🕐 Avvio monitoraggio timeout analisi ogni ${interval} minuti`);
     }
+    const { timeoutService } = await import('./timeoutService');
     this.timeoutMonitoringInterval = timeoutService.startTimeoutMonitoring(interval);
   }
 
   /**
    * Ferma il monitoraggio automatico dei timeout
    */
-  stopTimeoutMonitoring() {
+  async stopTimeoutMonitoring() {
     if (this.timeoutMonitoringInterval) {
+      const { timeoutService } = await import('./timeoutService');
       timeoutService.stopTimeoutMonitoring(this.timeoutMonitoringInterval);
       this.timeoutMonitoringInterval = null;
       if (import.meta.env.DEV) {
@@ -638,6 +639,7 @@ class AnalysisService {
    * Gestisce manualmente i timeout delle analisi
    */
   async handleTimeouts() {
+    const { timeoutService } = await import('./timeoutService');
     return await timeoutService.handleTimeoutAnalyses();
   }
 
@@ -645,6 +647,7 @@ class AnalysisService {
    * Controlla se un'analisi specifica è scaduta
    */
   async isAnalysisTimedOut(analysisId: string): Promise<boolean> {
+    const { timeoutService } = await import('./timeoutService');
     return await timeoutService.isAnalysisTimedOut(analysisId);
   }
 
@@ -652,6 +655,7 @@ class AnalysisService {
    * Forza il timeout di un'analisi specifica
    */
   async forceTimeoutAnalysis(analysisId: string) {
+    const { timeoutService } = await import('./timeoutService');
     return await timeoutService.forceTimeoutAnalysis(analysisId);
   }
 }
@@ -661,8 +665,8 @@ export const analysisService = new AnalysisService();
 // Avvia automaticamente il monitoraggio timeout
 if (typeof window !== 'undefined') {
   // Avvia dopo 30 secondi per permettere l'inizializzazione completa
-  setTimeout(() => {
-    analysisService.startTimeoutMonitoring(2); // Ogni 2 minuti
+  setTimeout(async () => {
+    await analysisService.startTimeoutMonitoring(2); // Ogni 2 minuti
     if (import.meta.env.DEV) {
       console.log('🔄 Monitoraggio timeout avviato automaticamente');
     }
