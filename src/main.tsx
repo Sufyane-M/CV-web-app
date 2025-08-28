@@ -4,7 +4,6 @@ import App from './App';
 import './index.css';
 import { register as registerSW } from './utils/serviceWorker';
 
-// Cache busting comment - Updated: 2025-01-16 15:30
 // No dev-only debug imports in production build
 
 // Register Service Worker after first paint to avoid competing with initial load

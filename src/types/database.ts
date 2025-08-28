@@ -33,8 +33,6 @@ export interface Database {
           can_upgrade: boolean
           upgraded_from: string | null
           results: Json | null
-          keywords_found: string[] | null
-          keywords_missing: string[] | null
         }
         Insert: {
           id: string
@@ -59,8 +57,6 @@ export interface Database {
           can_upgrade?: boolean
           upgraded_from?: string | null
           results?: Json | null
-          keywords_found?: string[] | null
-          keywords_missing?: string[] | null
         }
         Update: {
           id?: string
@@ -85,8 +81,6 @@ export interface Database {
           can_upgrade?: boolean
           upgraded_from?: string | null
           results?: Json | null
-          keywords_found?: string[] | null
-          keywords_missing?: string[] | null
         }
         Relationships: [
           {

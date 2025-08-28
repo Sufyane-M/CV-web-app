@@ -2,7 +2,7 @@ import { getSupabase } from './supabase';
 import { attachmentService, UploadedFileInfo } from './attachmentService';
 import { creditService } from './creditService';
 import { cacheService, CacheKeys } from './cacheService';
-import { keywordAnalysisService, KeywordAnalysisResult } from './keywordAnalysisService';
+import { timeoutService } from './timeoutService';
 import { Database } from '../types/database';
 
 type CVAnalysis = Database['public']['Tables']['cv_analyses']['Row'];
@@ -324,152 +324,6 @@ class AnalysisService {
   }
 
   /**
-   * Aggiorna un'analisi con i risultati delle keyword
-   */
-  async updateAnalysisWithKeywords(
-    analysisId: string,
-    keywordAnalysis: KeywordAnalysisResult
-  ): Promise<CVAnalysis | null> {
-    try {
-      const updates: CVAnalysisUpdate = {
-        keywords_found: keywordAnalysis.keywordsFound,
-        keywords_missing: keywordAnalysis.keywordsMissing,
-        updated_at: new Date().toISOString()
-      };
-
-      return await this.updateAnalysis(analysisId, updates);
-    } catch (error) {
-      console.error('Error updating analysis with keywords:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Processa le keyword per un'analisi completata
-   */
-  async processKeywordsForAnalysis(
-    analysisId: string,
-    cvText?: string
-  ): Promise<KeywordAnalysisResult | null> {
-    try {
-      // Recupera l'analisi esistente
-      const analysis = await this.getAnalysisById(analysisId);
-      if (!analysis) {
-        console.error('Analysis not found for keyword processing:', analysisId);
-        return null;
-      }
-
-      // Se non abbiamo il testo del CV, prova a recuperarlo dai risultati
-      let extractedText = cvText;
-      if (!extractedText && analysis.results) {
-        // Cerca il testo estratto nei risultati dell'analisi
-        extractedText = this.extractTextFromAnalysisResults(analysis.results);
-      }
-
-      if (!extractedText) {
-        console.warn('No CV text available for keyword analysis:', analysisId);
-        return null;
-      }
-
-      // Analizza le keyword
-      const keywordAnalysis = keywordAnalysisService.analyzeKeywords(
-        extractedText,
-        analysis.job_description || '',
-        {
-          minLength: 2,
-          excludeCommonWords: true,
-          caseSensitive: false,
-          includePartialMatches: true
-        }
-      );
-
-      // Aggiorna l'analisi con i risultati delle keyword
-      const updatedAnalysis = await this.updateAnalysisWithKeywords(
-        analysisId,
-        keywordAnalysis
-      );
-
-      if (updatedAnalysis) {
-        console.log('Successfully processed keywords for analysis:', analysisId);
-        return keywordAnalysis;
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Error processing keywords for analysis:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Estrae il testo del CV dai risultati dell'analisi
-   */
-  private extractTextFromAnalysisResults(results: any): string | null {
-    try {
-      // Cerca il testo in vari formati possibili nei risultati
-      if (typeof results === 'string') {
-        return results;
-      }
-
-      if (typeof results === 'object' && results !== null) {
-        // Cerca campi comuni che potrebbero contenere il testo del CV
-        const textFields = ['cv_text', 'extracted_text', 'content', 'text', 'raw_text'];
-        
-        for (const field of textFields) {
-          if (results[field] && typeof results[field] === 'string') {
-            return results[field];
-          }
-        }
-
-        // Se è un oggetto complesso, cerca ricorsivamente
-        const visited = new WeakSet();
-        const candidates: string[] = [];
-        
-        const searchInObject = (obj: any): void => {
-          // Evita cicli infiniti
-          if (obj === null || typeof obj !== 'object') return;
-          if (visited.has(obj)) return;
-          visited.add(obj);
-          
-          // Gestisce array iterando gli elementi
-          if (Array.isArray(obj)) {
-            for (const item of obj) {
-              if (typeof item === 'string' && item.length > 100) {
-                candidates.push(item);
-              } else if (typeof item === 'object' && item !== null) {
-                searchInObject(item);
-              }
-            }
-          } else {
-            // Gestisce oggetti normali
-            for (const key in obj) {
-              if (typeof obj[key] === 'string' && obj[key].length > 100) {
-                candidates.push(obj[key]);
-              } else if (typeof obj[key] === 'object' && obj[key] !== null) {
-                searchInObject(obj[key]);
-              }
-            }
-          }
-        };
-
-        searchInObject(results);
-        
-        // Restituisce il candidato più lungo, o null se nessuno
-        return candidates.length > 0 
-          ? candidates.reduce((longest, current) => 
-              current.length > longest.length ? current : longest
-            )
-          : null;
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Error extracting text from analysis results:', error);
-      return null;
-    }
-  }
-
-  /**
    * Recupera un'analisi per ID
    */
   async getAnalysisById(analysisId: string): Promise<CVAnalysis | null> {
@@ -605,7 +459,7 @@ class AnalysisService {
   /**
    * Avvia il monitoraggio automatico dei timeout
    */
-  async startTimeoutMonitoring(intervalMinutes?: number) {
+  startTimeoutMonitoring(intervalMinutes?: number) {
     const interval = intervalMinutes ?? 2;
     if (this.timeoutMonitoringInterval) {
       if (import.meta.env.DEV) {
@@ -617,16 +471,14 @@ class AnalysisService {
     if (import.meta.env.DEV) {
       console.log(`🕐 Avvio monitoraggio timeout analisi ogni ${interval} minuti`);
     }
-    const { timeoutService } = await import('./timeoutService');
     this.timeoutMonitoringInterval = timeoutService.startTimeoutMonitoring(interval);
   }
 
   /**
    * Ferma il monitoraggio automatico dei timeout
    */
-  async stopTimeoutMonitoring() {
+  stopTimeoutMonitoring() {
     if (this.timeoutMonitoringInterval) {
-      const { timeoutService } = await import('./timeoutService');
       timeoutService.stopTimeoutMonitoring(this.timeoutMonitoringInterval);
       this.timeoutMonitoringInterval = null;
       if (import.meta.env.DEV) {
@@ -639,7 +491,6 @@ class AnalysisService {
    * Gestisce manualmente i timeout delle analisi
    */
   async handleTimeouts() {
-    const { timeoutService } = await import('./timeoutService');
     return await timeoutService.handleTimeoutAnalyses();
   }
 
@@ -647,7 +498,6 @@ class AnalysisService {
    * Controlla se un'analisi specifica è scaduta
    */
   async isAnalysisTimedOut(analysisId: string): Promise<boolean> {
-    const { timeoutService } = await import('./timeoutService');
     return await timeoutService.isAnalysisTimedOut(analysisId);
   }
 
@@ -655,7 +505,6 @@ class AnalysisService {
    * Forza il timeout di un'analisi specifica
    */
   async forceTimeoutAnalysis(analysisId: string) {
-    const { timeoutService } = await import('./timeoutService');
     return await timeoutService.forceTimeoutAnalysis(analysisId);
   }
 }
@@ -665,8 +514,8 @@ export const analysisService = new AnalysisService();
 // Avvia automaticamente il monitoraggio timeout
 if (typeof window !== 'undefined') {
   // Avvia dopo 30 secondi per permettere l'inizializzazione completa
-  setTimeout(async () => {
-    await analysisService.startTimeoutMonitoring(2); // Ogni 2 minuti
+  setTimeout(() => {
+    analysisService.startTimeoutMonitoring(2); // Ogni 2 minuti
     if (import.meta.env.DEV) {
       console.log('🔄 Monitoraggio timeout avviato automaticamente');
     }

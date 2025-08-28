@@ -36,16 +36,11 @@ const InsufficientCreditsError: React.FC<InsufficientCreditsErrorProps> = ({
   };
 
   const handleContactSupport = () => {
-    // Costruisci l'URL mailto con parametri codificati
-    const subject = encodeURIComponent('Problema con i crediti');
-    const body = encodeURIComponent(`Codice errore: ${errorCode}`);
-    const mailtoUrl = `mailto:support@analizzatore-cv.com?subject=${subject}&body=${body}`;
-    
-    // Usa window.location.href per evitare tab vuoti
-    window.location.href = mailtoUrl;
+    // Apri il supporto in una nuova finestra/tab
+    window.open('mailto:support@analizzatore-cv.com?subject=Problema con i crediti&body=Codice errore: ' + errorCode, '_blank');
   };
 
-  const currentCredits = profile?.credits ?? creditsAvailable;
+  const currentCredits = profile?.credits || creditsAvailable;
 
   return (
     <div className={cn("min-h-[500px] flex items-center justify-center p-6", className)}>
@@ -55,7 +50,7 @@ const InsufficientCreditsError: React.FC<InsufficientCreditsErrorProps> = ({
           <div className="flex justify-center mb-6">
             <div className="relative">
               <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
-                <AlertTriangle className="w-10 h-10 text-white" aria-hidden="true" />
+                <AlertTriangle className="w-10 h-10 text-white" />
               </div>
               <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-xs font-bold">!</span>
@@ -78,7 +73,7 @@ const InsufficientCreditsError: React.FC<InsufficientCreditsErrorProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                  <CreditCard className="w-6 h-6 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                  <CreditCard className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -131,7 +126,7 @@ const InsufficientCreditsError: React.FC<InsufficientCreditsErrorProps> = ({
                 onClick={handleBuyCredits}
                 size="lg"
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transform hover:scale-[1.02] transition-all duration-200"
-                leftIcon={<CreditCard className="w-5 h-5" aria-hidden="true" />}
+                leftIcon={<CreditCard className="w-5 h-5" />}
               >
                 Acquista Crediti
               </Button>
@@ -143,7 +138,7 @@ const InsufficientCreditsError: React.FC<InsufficientCreditsErrorProps> = ({
                   variant="outline"
                   size="lg"
                   className="w-full border-2 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 py-4 px-6 rounded-xl font-medium transition-all duration-200"
-                  leftIcon={<RefreshCw className="w-5 h-5" aria-hidden="true" />}
+                  leftIcon={<RefreshCw className="w-5 h-5" />}
                 >
                   Riprova
                 </Button>
@@ -156,7 +151,7 @@ const InsufficientCreditsError: React.FC<InsufficientCreditsErrorProps> = ({
                 onClick={handleContactSupport}
                 className="inline-flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200"
               >
-                <HelpCircle className="w-4 h-4 mr-2" aria-hidden="true" />
+                <HelpCircle className="w-4 h-4 mr-2" />
                 Il problema persiste? Contatta il supporto
               </button>
             </div>
@@ -165,29 +160,21 @@ const InsufficientCreditsError: React.FC<InsufficientCreditsErrorProps> = ({
           {/* Sezione tecnica collassabile */}
           <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
             <button
-              id="technical-details-toggle"
               onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
               className="flex items-center justify-between w-full text-left p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200"
-              aria-controls="technical-details-content"
-              aria-expanded={showTechnicalDetails}
             >
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Dettagli tecnici
               </span>
               {showTechnicalDetails ? (
-                <ChevronUp className="w-4 h-4 text-gray-500" aria-hidden="true" />
+                <ChevronUp className="w-4 h-4 text-gray-500" />
               ) : (
-                <ChevronDown className="w-4 h-4 text-gray-500" aria-hidden="true" />
+                <ChevronDown className="w-4 h-4 text-gray-500" />
               )}
             </button>
             
             {showTechnicalDetails && (
-              <div 
-                id="technical-details-content"
-                role="region"
-                aria-labelledby="technical-details-toggle"
-                className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
-              >
+              <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400">Codice errore:</span>

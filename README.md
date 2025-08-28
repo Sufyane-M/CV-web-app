@@ -103,9 +103,6 @@ VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
 
 # API
 VITE_API_BASE_URL=/api
-
-# Development/Testing (optional)
-VITE_ENABLE_TEST_ROUTES=true  # Set to 'true' to enable test routes in production
 ```
 
 ### 4. Setup Supabase

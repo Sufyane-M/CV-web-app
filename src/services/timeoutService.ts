@@ -1,5 +1,5 @@
 import { getSupabase } from './supabase';
-import { creditService, CREDITS_PER_PAID_ANALYSIS } from './creditService';
+import { creditService } from './creditService';
 import { Database } from '../types/database';
 
 type CVAnalysis = Database['public']['Tables']['cv_analyses']['Row'];
@@ -191,22 +191,23 @@ class TimeoutService {
         }
 
         if (creditTransaction) {
-          // Ripristina il credito usando RPC atomico
-          const { data: creditResult, error: creditError } = await supabase
-            .rpc('increment_user_credits', {
-              p_user_id: analysis.user_id,
-              p_amount: CREDITS_PER_PAID_ANALYSIS
-            });
+          // Ripristina il credito
+          const { error: creditError } = await supabase
+            .from('user_profiles')
+            .update({ 
+              credits: supabase.raw('credits + 1'),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', analysis.user_id);
 
-          if (creditError || !creditResult?.[0]?.success) {
-            const errorMsg = creditError?.message || creditResult?.[0]?.message || 'Unknown error';
-            throw new Error(`Errore nel ripristino del credito: ${errorMsg}`);
+          if (creditError) {
+            throw new Error(`Errore nel ripristino del credito: ${creditError.message}`);
           }
 
           // Crea una transazione di rimborso
           const refundTransaction: CreditTransaction = {
             user_id: analysis.user_id,
-            amount: CREDITS_PER_PAID_ANALYSIS,
+            amount: 1,
             type: 'refund',
             analysis_id: analysis.id,
             description: `Rimborso per timeout analisi: ${analysis.file_name}`,

@@ -26,14 +26,15 @@ export default defineConfig(({ mode }) => {
           drop_console: true,
           drop_debugger: true,
         },
-        mangle: {
-          // Preserve variable names to avoid initialization issues
-          keep_fnames: true,
-        },
       },
       rollupOptions: {
         output: {
           manualChunks: (id) => {
+            // Core React chunk (highest priority)
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react-core';
+            }
+            
             // Router chunk (loaded on navigation)
             if (id.includes('react-router')) {
               return 'router';
@@ -61,19 +62,13 @@ export default defineConfig(({ mode }) => {
             
             // Admin components chunk (none at the moment)
             
-            // Large vendor libraries - split by specific packages to avoid initialization issues
+            // Large vendor libraries
+            if (id.includes('node_modules') && id.length > 100) {
+              return 'vendor-large';
+            }
+            
+            // Default vendor chunk for remaining node_modules
             if (id.includes('node_modules')) {
-              // Split large libraries into separate chunks
-              if (id.includes('react') || id.includes('react-dom')) {
-                return 'vendor-react';
-              }
-              if (id.includes('@supabase')) {
-                return 'vendor-supabase';
-              }
-              if (id.includes('lucide-react')) {
-                return 'vendor-icons';
-              }
-              // Default vendor chunk for remaining smaller libraries
               return 'vendor';
             }
           },
@@ -89,9 +84,7 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 1000,
     },
     plugins: [
-      react({
-        jsxRuntime: 'automatic'
-      }),
+      react(),
       splitVendorChunkPlugin(),
       // Bundle analyzer
       visualizer({
@@ -117,7 +110,6 @@ export default defineConfig(({ mode }) => {
         'react',
         'react-dom',
         'react-router-dom',
-        'react/jsx-runtime',
         '@supabase/supabase-js',
         'web-vitals'
       ],

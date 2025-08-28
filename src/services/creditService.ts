@@ -1,9 +1,6 @@
 import { db } from './supabase';
 import type { UserProfile } from '../types';
 
-// Costante per i crediti richiesti per analisi a pagamento
-export const CREDITS_PER_PAID_ANALYSIS = 2;
-
 export interface AnalysisEligibility {
   canAnalyze: boolean;
   analysisType: 'free' | 'paid';
@@ -62,7 +59,7 @@ class CreditService {
       }
 
       const hasFreeAnalysisAvailable = !profile.has_used_free_analysis;
-      const creditsAvailable = profile.credits ?? 0;
+      const creditsAvailable = profile.credits || 0;
 
       // Se ha l'analisi gratuita disponibile
       if (hasFreeAnalysisAvailable) {
@@ -75,12 +72,12 @@ class CreditService {
         };
       }
 
-      // Se ha crediti disponibili (richiede CREDITS_PER_PAID_ANALYSIS crediti)
-      if (creditsAvailable >= CREDITS_PER_PAID_ANALYSIS) {
+      // Se ha crediti disponibili (ora richiede 2 crediti)
+      if (creditsAvailable >= 2) {
         return {
           canAnalyze: true,
           analysisType: 'paid',
-          creditsRequired: CREDITS_PER_PAID_ANALYSIS,
+          creditsRequired: 2,
           creditsAvailable,
           hasFreeAnalysisAvailable: false
         };
@@ -90,8 +87,8 @@ class CreditService {
       return {
         canAnalyze: false,
         analysisType: 'paid',
-        reason: `Crediti insufficienti (richiesti ${CREDITS_PER_PAID_ANALYSIS} crediti). Acquista un pacchetto per continuare.`,
-        creditsRequired: CREDITS_PER_PAID_ANALYSIS,
+        reason: 'Crediti insufficienti. Servono 2 crediti per analisi. Acquista un pacchetto per continuare.',
+        creditsRequired: 2,
         creditsAvailable,
         hasFreeAnalysisAvailable: false
       };
@@ -144,24 +141,43 @@ class CreditService {
   }
 
   /**
-   * Consuma crediti per analisi a pagamento usando operazione atomica
+   * Consuma 2 crediti per analisi a pagamento
    */
   async consumeCredit(userId: string, analysisId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      // Usa la funzione atomica del database per evitare race conditions
-      const { data: success, error: rpcError } = await db.rpc('consume_paid_credits', {
-        p_user_id: userId,
-        p_credits: CREDITS_PER_PAID_ANALYSIS,
-        p_analysis_id: analysisId
-      });
-
-      if (rpcError) {
-        console.error('Errore nella chiamata RPC consume_paid_credits:', rpcError);
-        return { success: false, error: 'Errore interno nella deduzione crediti' };
+      const { data: profile, error: getError } = await db.profiles.get(userId);
+      
+      if (getError || !profile) {
+        return { success: false, error: 'Profilo utente non trovato' };
       }
 
-      if (!success) {
-        return { success: false, error: `Crediti insufficienti (richiesti ${CREDITS_PER_PAID_ANALYSIS} crediti)` };
+      if ((profile.credits || 0) < 2) {
+        return { success: false, error: 'Crediti insufficienti (richiesti 2 crediti)' };
+      }
+
+      // Aggiorna i crediti
+      const { error: updateError } = await db.profiles.update(userId, {
+        credits: (profile.credits || 0) - 2,
+        updated_at: new Date().toISOString()
+      });
+
+      if (updateError) {
+        console.error('Errore nella deduzione credito:', updateError);
+        return { success: false, error: 'Errore nella deduzione del credito' };
+      }
+
+      // Registra la transazione
+      const { error: transactionError } = await db.creditTransactions.create({
+        user_id: userId,
+        type: 'consumption',
+        amount: -2,
+        description: 'Analisi CV a pagamento (2 crediti)',
+        analysis_id: analysisId
+      });
+
+      if (transactionError) {
+        console.error('Errore nella registrazione transazione:', transactionError);
+        // Non bloccare l'operazione per errori di logging
       }
 
       return { success: true };
@@ -193,8 +209,8 @@ class CreditService {
 
       // Prepara gli aggiornamenti
       const updates: any = {
-        credits: (profile.credits ?? 0) + credits,
-        total_credits_purchased: (profile.total_credits_purchased ?? 0) + credits,
+        credits: (profile.credits || 0) + credits,
+        total_credits_purchased: (profile.total_credits_purchased || 0) + credits,
         last_payment_date: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };

@@ -130,7 +130,7 @@ const CreditsCard: React.FC<CreditsCardProps> = ({ credits, hasFreeAnalysisAvail
   
   // Determina lo stato dei crediti
   const getCreditsStatus = () => {
-    if (credits <= 0) return 'empty';
+    if (credits === 0) return 'empty';
     if (credits < 2) return 'low';
     if (credits <= 5) return 'medium';
     return 'high';
