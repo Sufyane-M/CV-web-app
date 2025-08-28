@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { auth, db } from '../services/supabase';
+import { getSupabase } from '../services/supabase';
 import type { UserProfile, AuthUser } from '../types';
 import { useNotification } from '../hooks/useNotificationMigration';
 
@@ -63,7 +63,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initializeAuth = async () => {
       try {
         // Timeout per l'inizializzazione (ottimizzato a 8 secondi)
-        const authPromise = auth.getSession();
+        const authPromise = getSupabase().auth.getSession();
         const timeoutPromise = new Promise((_, reject) => {
           const timeout = setTimeout(() => {
             reject(new Error('Auth initialization timeout'));
@@ -104,7 +104,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth();
 
     // Listen for auth changes
-    const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = getSupabase().auth.onAuthStateChange(async (event, session) => {
       if (!mountedRef.current) return;
       
       setSession(session);
@@ -149,7 +149,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     try {
       // Timeout per il caricamento del profilo (ottimizzato a 8 secondi)
-      const profilePromise = db.profiles.get(userId);
+      const profilePromise = getSupabase()
+          .from('user_profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
       const timeoutPromise = new Promise((_, reject) => {
         const timeout = setTimeout(() => reject(new Error('Profile loading timeout')), 5000); // Ottimizzato a 5 secondi
         timeoutsRef.current.add(timeout);
@@ -212,7 +216,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('Attempting signup with:', { email, fullName });
       }
       
-      const { data, error } = await auth.signUp(email, password, fullName);
+      const { data, error } = await getSupabase().auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: typeof fullName === 'string' ? fullName.trim() : '',
+          },
+        },
+      });
       
       if (error) {
         // Silenzia logging console in produzione
@@ -262,7 +274,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const { data, error } = await auth.signIn(email, password);
+      const { data, error } = await getSupabase().auth.signInWithPassword({
+        email,
+        password,
+      });
       
       if (error) {
         return { success: false, error: error.message };
@@ -281,7 +296,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signInWithProvider = async (provider: 'google' | 'github' | 'linkedin_oidc') => {
     try {
       setLoading(true);
-      const { data, error } = await auth.signInWithProvider(provider);
+      const { data, error } = await getSupabase().auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
       
       if (error) {
         return { success: false, error: error.message };
@@ -304,7 +324,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signOut = async () => {
     try {
       setLoading(true);
-      const { error } = await auth.signOut();
+      const { error } = await getSupabase().auth.signOut();
       
       if (error) {
         notification.error('Errore durante la disconnessione');
@@ -326,7 +346,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Reset password
   const resetPassword = async (email: string) => {
     try {
-      const { data, error } = await auth.resetPassword(email);
+      const { data, error } = await getSupabase().auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
       
       if (error) {
         return { error: error.message };
@@ -342,7 +364,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Update password
   const updatePassword = async (password: string) => {
     try {
-      const { data, error } = await auth.updatePassword(password);
+      const { data, error } = await getSupabase().auth.updateUser({
+        password,
+      });
       
       if (error) {
         return { error: error.message };
@@ -362,7 +386,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
     
     try {
-      const { data, error } = await db.profiles.update(user.id, updates);
+      const { data, error } = await getSupabase()
+        .from('user_profiles')
+        .update(updates)
+        .eq('id', user.id)
+        .select()
+        .single();
       
       if (error) {
         return { error: error.message };

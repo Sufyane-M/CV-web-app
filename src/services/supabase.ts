@@ -32,9 +32,14 @@ const retryOperation = async <T>(operation: () => Promise<T>, maxRetries = 3, de
 
 let supabaseSingleton: ReturnType<typeof createClient<Database>> | null = null;
 
-export const getSupabase = () => {
-  if (supabaseSingleton) return supabaseSingleton;
-  supabaseSingleton = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+export const getSupabase = (): ReturnType<typeof createClient<Database>> => {
+  if (supabaseSingleton) {
+    return supabaseSingleton;
+  }
+  
+  // Initialize Supabase client with proper error handling
+  try {
+    supabaseSingleton = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
@@ -60,7 +65,22 @@ export const getSupabase = () => {
       },
     },
   });
+  
   return supabaseSingleton;
+  } catch (error) {
+    console.error('Failed to initialize Supabase client:', error);
+    throw new Error('Supabase initialization failed');
+  }
+};
+
+// Export a safe getter that handles initialization errors
+export const getSafeSupabase = () => {
+  try {
+    return getSupabase();
+  } catch (error) {
+    console.error('Supabase client unavailable:', error);
+    return null;
+  }
 };
 
 // Auth helpers
