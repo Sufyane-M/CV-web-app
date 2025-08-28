@@ -25,6 +25,7 @@ const PricingPage = lazy(() => import('./pages/PricingPage'));
 const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
 const PaymentCancelPage = lazy(() => import('./pages/PaymentCancelPage'));
+const TestInsufficientCreditsPage = lazy(() => import('./pages/TestInsufficientCreditsPage'));
 
 // Components
 import Layout from './components/shared/Layout';
@@ -178,6 +179,20 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      
+      {/* Test Routes - Development Only */}
+      {(import.meta.env.VITE_ENABLE_TEST_ROUTES === 'true' || import.meta.env.DEV) && (
+        <Route
+          path="/test/insufficient-credits"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <TestInsufficientCreditsPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+      )}
       
       {/* Catch all route */}
       <Route path="*" element={<Navigate to="/" replace />} />

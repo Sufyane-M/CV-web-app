@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, lazy } from 'react';
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Play, Eye, EyeOff, CreditCard, FileText, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,6 +21,9 @@ import { formatDate } from '../utils/formatters';
 import ErrorFallback from '../components/ErrorFallback';
 const EnhancedAnalysisResults = lazy(() => import('../components/cv-analysis/EnhancedAnalysisResults'));
 import '../styles/enhanced-analysis.css';
+
+// Constants
+const CREDITS_REQUIRED_PER_ANALYSIS = 2;
 
 // Types
 interface AnalysisState {
@@ -126,7 +129,7 @@ const AnalysisPage: React.FC = () => {
         if (!error && data && data.length > 0) {
           const newCredits = (data[0] as any).new_credits;
           if (typeof newCredits === 'number') {
-            showSuccess(`1 credito detratto. Nuovo saldo: ${newCredits}`, { duration: 6000, dismissible: true });
+            showSuccess(`Analisi completata con successo! ${CREDITS_REQUIRED_PER_ANALYSIS} crediti detratti. Nuovo saldo: ${newCredits}`, { duration: 6000, dismissible: true });
           }
         }
       }
@@ -135,7 +138,6 @@ const AnalysisPage: React.FC = () => {
       console.warn('Detrazione credito al completamento non riuscita:', err);
     }
     await refreshProfile();
-    showSuccess('Analisi completata con successo!', { duration: 5000, dismissible: true });
   }, [refreshProfile, showSuccess, showError, user, isInvalidAnalysisResult]);
 
   const handleRealtimeError = useCallback((errorMsg: string) => {
@@ -248,7 +250,7 @@ const AnalysisPage: React.FC = () => {
         if (result.analysisType === 'free') {
           showSuccess('Analisi gratuita avviata.');
         } else {
-          showInfo('Analisi a pagamento avviata: il credito sarà detratto solo al completamento.');
+          showInfo(`Analisi a pagamento avviata: i ${CREDITS_REQUIRED_PER_ANALYSIS} crediti saranno detratti solo al completamento.`);
         }
         
         // Aggiorna il profilo per riflettere i cambiamenti
@@ -538,6 +540,9 @@ const AnalysisPage: React.FC = () => {
               showHomeButton={false}
               title="Errore nell'Analisi"
               description="Si è verificato un problema durante l'analisi del tuo CV."
+              creditsRequired={2}
+              creditsAvailable={profile?.credits || 0}
+              errorCode="ANALYSIS_ERROR_001"
             />
           </div>
         )}

@@ -17,8 +17,9 @@ import { useNotification } from '../hooks/useNotificationMigration';
 import Button from '../components/ui/Button';
 import Card, { CardHeader, CardContent, CardFooter } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
+import FAQ, { type FAQItem } from '../components/ui/FAQ';
 import { createCheckoutSession, BUNDLES, formatPrice, type BundleId } from '../services/stripe';
-import { PaymentLinkGenerator } from '../components/stripe/StripeCheckoutWithCoupon';
+
 // import PaymentDebugPanel from '../components/PaymentDebugPanel'; // Temporarily disabled
 
 interface Bundle {
@@ -187,37 +188,63 @@ const PricingPage: React.FC = () => {
   );
 
   // FAQ data
-  const faqs = [
+  const faqs: FAQItem[] = [
     {
+      id: 'credits-system',
       question: 'Come funziona il sistema a crediti?',
-      answer: 'Ogni credito ti permette di effettuare 1 analisi completa del CV. La prima analisi è sempre gratuita ma con funzionalità limitate. Acquistando un bundle, sblocchi immediatamente i risultati completi della prima analisi e ottieni crediti aggiuntivi per nuove analisi.',
+      answer: 'Ogni analisi completa del CV richiede 2 crediti. La prima analisi è sempre gratuita ma con funzionalità limitate. Acquistando un bundle, sblocchi immediatamente i risultati completi della prima analisi e ottieni crediti aggiuntivi per nuove analisi.',
       icon: HelpCircle,
+      category: 'Sistema'
     },
     {
+      id: 'unlock-analysis',
       question: 'Cosa significa "sbloccare" la prima analisi?',
       answer: 'La prima analisi gratuita mostra solo una parte dei risultati - alcune sezioni come feedback critici e warning sono offuscate. Acquistando un bundle, accedi immediatamente a tutti i dettagli nascosti della tua prima analisi.',
       icon: Sparkles,
+      category: 'Funzionalità'
     },
     {
+      id: 'credits-expiry',
       question: 'I crediti scadono?',
-      answer: 'No, i crediti acquistati non scadono mai. Puoi utilizzarli quando vuoi, senza limiti di tempo.',
+      answer: 'No, i crediti acquistati non scadono mai. Puoi utilizzarli quando vuoi, senza limiti di tempo. Questa flessibilità ti permette di analizzare i tuoi CV quando ne hai più bisogno, senza pressioni temporali.',
       icon: Clock,
+      category: 'Sistema'
     },
     {
+      id: 'payment-methods',
       question: 'Quali metodi di pagamento sono accettati?',
-      answer: 'Accettiamo le principali carte di credito e debito (Visa, Mastercard, American Express) e PayPal tramite il nostro partner di pagamento sicuro Stripe.',
+      answer: 'Accettiamo le principali carte di credito e debito (Visa, Mastercard, American Express) e PayPal tramite il nostro partner di pagamento sicuro Stripe. Tutti i pagamenti sono processati in modo sicuro e crittografato.',
       icon: CreditCard,
+      category: 'Pagamenti'
     },
     {
+      id: 'transaction-security',
       question: 'La transazione è sicura?',
-      answer: 'Sì, tutte le transazioni sono gestite da Stripe, leader mondiale nei pagamenti online, che garantisce i massimi standard di sicurezza e crittografia.',
+      answer: 'Assolutamente sì. Tutte le transazioni sono gestite da Stripe, leader mondiale nei pagamenti online, che garantisce i massimi standard di sicurezza PCI DSS Level 1 e crittografia SSL/TLS. I tuoi dati di pagamento non vengono mai memorizzati sui nostri server.',
       icon: ShieldCheck,
+      category: 'Sicurezza'
     },
     {
+      id: 'invoice-receipt',
       question: 'Posso ottenere una fattura?',
-      answer: 'Certo. Dopo ogni acquisto, riceverai automaticamente una ricevuta via email. Se hai bisogno di una fattura con dati specifici, contatta il nostro supporto.',
+      answer: 'Certamente! Dopo ogni acquisto, riceverai automaticamente una ricevuta dettagliata via email. Se hai bisogno di una fattura con dati fiscali specifici per la tua azienda, contatta il nostro supporto clienti.',
       icon: Info,
+      category: 'Fatturazione'
     },
+    {
+      id: 'refund-policy',
+      question: 'Qual è la politica di rimborso?',
+      answer: 'Offriamo una garanzia di soddisfazione. Se non sei completamente soddisfatto del servizio entro 7 giorni dall\'acquisto, puoi richiedere un rimborso completo contattando il nostro supporto.',
+      icon: ShieldCheck,
+      category: 'Politiche'
+    },
+    {
+      id: 'bulk-analysis',
+      question: 'Posso analizzare più CV contemporaneamente?',
+      answer: 'Attualmente ogni analisi viene processata singolarmente per garantire la massima qualità e personalizzazione. Tuttavia, puoi caricare e analizzare più CV in sequenza utilizzando i tuoi crediti disponibili.',
+      icon: Sparkles,
+      category: 'Funzionalità'
+    }
   ];
 
   return (
@@ -272,46 +299,18 @@ const PricingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Sezione Generatore Link di Pagamento */}
-        <div className="mt-20">
-          <div className="mx-auto max-w-3xl">
-            <div className="rounded-2xl bg-white p-8 shadow-lg dark:bg-gray-800">
-              <h2 className="mb-6 text-center text-2xl font-bold text-gray-900 dark:text-white">
-                Genera Link di Pagamento
-              </h2>
-              <p className="mb-8 text-center text-gray-600 dark:text-gray-400">
-                Crea link di pagamento personalizzati con codici coupon per condividerli facilmente.
-              </p>
-              <PaymentLinkGenerator />
-            </div>
-          </div>
-        </div>
+
 
         {/* Sezione FAQ */}
         <div className="mt-20">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Domande Frequenti
-            </h2>
-            <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">
-              Trova qui le risposte alle domande più comuni.
-            </p>
-          </div>
-          <div className="mx-auto mt-10 max-w-3xl">
-            <div className="space-y-6">
-              {faqs.map((faq, index) => (
-                <div key={index} className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                  <dt className="text-lg font-semibold text-gray-900 dark:text-white">
-                    <div className="flex items-start">
-                      <faq.icon className="mr-4 h-6 w-6 flex-shrink-0 text-primary-500" />
-                      <span>{faq.question}</span>
-                    </div>
-                  </dt>
-                  <dd className="mt-3 text-gray-600 dark:text-gray-400">{faq.answer}</dd>
-                </div>
-              ))}
-            </div>
-          </div>
+          <FAQ 
+            items={faqs}
+            title="Domande Frequenti"
+            subtitle="Trova qui le risposte alle domande più comuni sui nostri servizi."
+            allowMultiple={false}
+            searchable={true}
+            className="mx-auto"
+          />
         </div>
       </div>
     </div>

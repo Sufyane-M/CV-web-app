@@ -84,7 +84,9 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 1000,
     },
     plugins: [
-      react(),
+      react({
+        jsxRuntime: 'automatic'
+      }),
       splitVendorChunkPlugin(),
       // Bundle analyzer
       visualizer({
@@ -110,6 +112,7 @@ export default defineConfig(({ mode }) => {
         'react',
         'react-dom',
         'react-router-dom',
+        'react/jsx-runtime',
         '@supabase/supabase-js',
         'web-vitals'
       ],

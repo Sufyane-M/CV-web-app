@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database';
+import { CREDITS_PER_PAID_ANALYSIS } from './creditService';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -481,7 +482,7 @@ export const utils = {
 
       // Deduct credit
       const { error: deductError } = await db.profiles.update(userId, {
-        credits: profile.credits - 1,
+        credits: profile.credits - CREDITS_PER_PAID_ANALYSIS,
         updated_at: new Date().toISOString(),
       });
 
@@ -493,7 +494,7 @@ export const utils = {
       const { error: transactionError } = await db.creditTransactions.create({
         user_id: userId,
         type: 'consumption',
-        amount: -1,
+        amount: -CREDITS_PER_PAID_ANALYSIS,
         description,
         analysis_id: analysisId,
       });

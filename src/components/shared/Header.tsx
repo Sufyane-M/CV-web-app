@@ -137,8 +137,9 @@ const Header: React.FC = () => {
   // Get credits badge color
   const getCreditsBadgeVariant = () => {
     if (!profile?.credits) return 'danger';
-    if (profile.credits <= 1) return 'warning';
-    if (profile.credits <= 5) return 'info';
+    if (profile.credits <= 1) return 'danger';
+    if (profile.credits <= 3) return 'warning';
+    if (profile.credits <= 6) return 'info';
     return 'success';
   };
 

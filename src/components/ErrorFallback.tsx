@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import InsufficientCreditsError from './error/InsufficientCreditsError';
 
 interface ErrorFallbackProps {
   error?: string;
@@ -8,6 +9,9 @@ interface ErrorFallbackProps {
   showHomeButton?: boolean;
   title?: string;
   description?: string;
+  creditsRequired?: number;
+  creditsAvailable?: number;
+  errorCode?: string;
 }
 
 const ErrorFallback: React.FC<ErrorFallbackProps> = ({
@@ -15,7 +19,10 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({
   onRetry,
   showHomeButton = true,
   title = 'Qualcosa è andato storto',
-  description = 'Si è verificato un errore imprevisto. Riprova più tardi.'
+  description = 'Si è verificato un errore imprevisto. Riprova più tardi.',
+  creditsRequired,
+  creditsAvailable,
+  errorCode
 }) => {
   const navigate = useNavigate();
 
@@ -25,6 +32,21 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({
 
   const isTimeoutError = error?.toLowerCase().includes('timeout');
   const isConnectionError = error?.toLowerCase().includes('connessione') || error?.toLowerCase().includes('connection');
+  const isInsufficientCreditsError = error?.toLowerCase().includes('crediti insufficienti') || 
+                                     error?.toLowerCase().includes('insufficient credits') ||
+                                     error?.toLowerCase().includes('crediti') && error?.toLowerCase().includes('insufficienti');
+
+  // Se è un errore di crediti insufficienti, usa il componente specializzato
+  if (isInsufficientCreditsError) {
+    return (
+      <InsufficientCreditsError
+        onRetry={onRetry}
+        creditsRequired={creditsRequired}
+        creditsAvailable={creditsAvailable}
+        errorCode={errorCode}
+      />
+    );
+  }
 
   const getErrorIcon = () => {
     if (isTimeoutError) {

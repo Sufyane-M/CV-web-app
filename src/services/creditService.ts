@@ -1,6 +1,9 @@
 import { db } from './supabase';
 import type { UserProfile } from '../types';
 
+// Costante per i crediti richiesti per analisi a pagamento
+export const CREDITS_PER_PAID_ANALYSIS = 2;
+
 export interface AnalysisEligibility {
   canAnalyze: boolean;
   analysisType: 'free' | 'paid';
@@ -25,16 +28,16 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
     id: 'starter',
     name: 'Pacchetto Base',
     price: 499, // €4,99
-    credits: 2,
-    description: 'Due analisi complete del CV',
+    credits: 4,
+    description: 'Due analisi complete del CV (4 crediti)',
     stripePriceId: 'price_1RtUD3CrDiPBhim5deeUX1IW' // Starter Pack
   },
   {
     id: 'premium',
     name: 'Pacchetto Premium', 
     price: 999, // €9,99
-    credits: 5,
-    description: 'Cinque analisi complete del CV',
+    credits: 10,
+    description: 'Cinque analisi complete del CV (10 crediti)',
     stripePriceId: 'price_1RtUD8CrDiPBhim5Ba5aMNou' // Value Pack
   }
 ];
@@ -59,7 +62,7 @@ class CreditService {
       }
 
       const hasFreeAnalysisAvailable = !profile.has_used_free_analysis;
-      const creditsAvailable = profile.credits || 0;
+      const creditsAvailable = profile.credits ?? 0;
 
       // Se ha l'analisi gratuita disponibile
       if (hasFreeAnalysisAvailable) {
@@ -72,12 +75,12 @@ class CreditService {
         };
       }
 
-      // Se ha crediti disponibili
-      if (creditsAvailable > 0) {
+      // Se ha crediti disponibili (richiede CREDITS_PER_PAID_ANALYSIS crediti)
+      if (creditsAvailable >= CREDITS_PER_PAID_ANALYSIS) {
         return {
           canAnalyze: true,
           analysisType: 'paid',
-          creditsRequired: 1,
+          creditsRequired: CREDITS_PER_PAID_ANALYSIS,
           creditsAvailable,
           hasFreeAnalysisAvailable: false
         };
@@ -87,9 +90,9 @@ class CreditService {
       return {
         canAnalyze: false,
         analysisType: 'paid',
-        reason: 'Crediti insufficienti. Acquista un pacchetto per continuare.',
-        creditsRequired: 1,
-        creditsAvailable: 0,
+        reason: `Crediti insufficienti (richiesti ${CREDITS_PER_PAID_ANALYSIS} crediti). Acquista un pacchetto per continuare.`,
+        creditsRequired: CREDITS_PER_PAID_ANALYSIS,
+        creditsAvailable,
         hasFreeAnalysisAvailable: false
       };
 
@@ -141,43 +144,24 @@ class CreditService {
   }
 
   /**
-   * Consuma un credito per analisi a pagamento
+   * Consuma crediti per analisi a pagamento usando operazione atomica
    */
   async consumeCredit(userId: string, analysisId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const { data: profile, error: getError } = await db.profiles.get(userId);
-      
-      if (getError || !profile) {
-        return { success: false, error: 'Profilo utente non trovato' };
-      }
-
-      if ((profile.credits || 0) <= 0) {
-        return { success: false, error: 'Crediti insufficienti' };
-      }
-
-      // Aggiorna i crediti
-      const { error: updateError } = await db.profiles.update(userId, {
-        credits: (profile.credits || 0) - 1,
-        updated_at: new Date().toISOString()
+      // Usa la funzione atomica del database per evitare race conditions
+      const { data: success, error: rpcError } = await db.rpc('consume_paid_credits', {
+        p_user_id: userId,
+        p_credits: CREDITS_PER_PAID_ANALYSIS,
+        p_analysis_id: analysisId
       });
 
-      if (updateError) {
-        console.error('Errore nella deduzione credito:', updateError);
-        return { success: false, error: 'Errore nella deduzione del credito' };
+      if (rpcError) {
+        console.error('Errore nella chiamata RPC consume_paid_credits:', rpcError);
+        return { success: false, error: 'Errore interno nella deduzione crediti' };
       }
 
-      // Registra la transazione
-      const { error: transactionError } = await db.creditTransactions.create({
-        user_id: userId,
-        type: 'consumption',
-        amount: -1,
-        description: 'Analisi CV a pagamento',
-        analysis_id: analysisId
-      });
-
-      if (transactionError) {
-        console.error('Errore nella registrazione transazione:', transactionError);
-        // Non bloccare l'operazione per errori di logging
+      if (!success) {
+        return { success: false, error: `Crediti insufficienti (richiesti ${CREDITS_PER_PAID_ANALYSIS} crediti)` };
       }
 
       return { success: true };
@@ -209,8 +193,8 @@ class CreditService {
 
       // Prepara gli aggiornamenti
       const updates: any = {
-        credits: (profile.credits || 0) + credits,
-        total_credits_purchased: (profile.total_credits_purchased || 0) + credits,
+        credits: (profile.credits ?? 0) + credits,
+        total_credits_purchased: (profile.total_credits_purchased ?? 0) + credits,
         last_payment_date: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };

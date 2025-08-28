@@ -2,6 +2,11 @@ import { getSupabase } from './supabase';
 import type { CVAnalysis } from './supabase';
 import { cacheService, CacheKeys } from './cacheService';
 
+// Configuration constants
+const MAX_RECENT_ANALYSES = 100;
+const DEFAULT_RECENT_ANALYSES = 5;
+const MIN_RECENT_ANALYSES = 1;
+
 export interface DashboardStats {
   totalAnalyses: number;
   userCredits: number;
@@ -40,7 +45,7 @@ export const dashboardService = {
 
           return {
             totalAnalyses: totalAnalyses || 0,
-            userCredits: profile?.credits || 0,
+            userCredits: profile?.credits ?? 0,
             userProfile: profile,
             hasFreeAnalysisAvailable: !profile?.has_used_free_analysis
           };
@@ -53,9 +58,15 @@ export const dashboardService = {
     }
   },
 
-  async getRecentAnalyses(userId: string, limit: number = 5): Promise<CVAnalysis[]> {
+  async getRecentAnalyses(userId: string, limit: number = DEFAULT_RECENT_ANALYSES): Promise<CVAnalysis[]> {
     try {
-      const cacheKey = `${CacheKeys.RECENT_ANALYSES(userId)}:${limit}`;
+      // Validate and clamp the limit parameter
+      const parsedLimit = parseInt(String(limit), 10);
+      const sanitizedLimit = isNaN(parsedLimit) || parsedLimit < MIN_RECENT_ANALYSES 
+        ? DEFAULT_RECENT_ANALYSES 
+        : Math.min(parsedLimit, MAX_RECENT_ANALYSES);
+      
+      const cacheKey = `${CacheKeys.RECENT_ANALYSES(userId)}:${sanitizedLimit}`;
       
       return await cacheService.getOrFetch(
         cacheKey,
@@ -65,7 +76,7 @@ export const dashboardService = {
             .select('*')
             .eq('user_id', userId)
             .order('created_at', { ascending: false })
-            .limit(limit);
+            .limit(sanitizedLimit);
 
           if (error) {
             console.error('Error fetching recent analyses:', error);
